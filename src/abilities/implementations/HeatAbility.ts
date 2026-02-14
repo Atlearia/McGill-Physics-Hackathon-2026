@@ -1,64 +1,90 @@
-import { PhysicsAbility } from '../PhysicsAbility';
+import { PhysicsAbility, VisualMode } from '../PhysicsAbility';
 
 /**
- * Increases balloon motion (boosts velocity, reduces damping) — warm zone.
+ * Heat — Thermal Expansion
+ * Increases balloon radius, adds outward radial velocity.
+ * Visual: radial orange gradient + outward vector arrows.
  */
 export class HeatAbility extends PhysicsAbility {
   readonly id = 'heat';
-  readonly name = 'Heat';
+  readonly name = 'ΔT↑';
+  readonly displayName = 'Thermal Expansion';
   readonly iconKey = 'icon-heat';
-  readonly category = 'temperature';
-  readonly radius = 70;
-  readonly color = 0xef5350;
-  strength = 1.08; // velocity multiplier per frame
+  readonly category = 'thermodynamics';
+  readonly radius = 220;
+  readonly color = 0xff6b35;
+  readonly visualMode: VisualMode = 'vectors';
+  strength = 0.0004;
 
   applyEffect(
     _scene: Phaser.Scene,
     body: MatterJS.BodyType,
     dist: number,
-    _dx: number,
-    _dy: number,
+    dx: number,
+    dy: number,
     _dt: number
   ): void {
-    // Boost velocity slightly — stronger near center
+    if (dist < 1) return;
     const falloff = 1 - dist / this.radius;
-    const boost = 1 + (this.strength - 1) * falloff;
-    const vel = (body as any).velocity;
-    const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-    // Clamp max speed to avoid chaos
-    if (speed < 4) {
-      (body as any).force.x += vel.x * (boost - 1) * 0.01;
-      (body as any).force.y += vel.y * (boost - 1) * 0.01;
-    }
-    // Also add a tiny random jitter (thermal noise)
-    (body as any).force.x += (Math.random() - 0.5) * 0.00015 * falloff;
-    (body as any).force.y += (Math.random() - 0.5) * 0.00015 * falloff;
+    // Outward radial push
+    const mag = this.strength * falloff;
+    (body as any).force.x += (dx / dist) * mag;
+    (body as any).force.y += (dy / dist) * mag;
+  }
+
+  applyGlobalEffect(
+    _scene: Phaser.Scene,
+    _body: MatterJS.BodyType,
+    balloon: any,
+    _dt: number
+  ): void {
+    // Expand balloon visually
+    balloon.targetRadius = Math.min(balloon.baseRadius * 1.8, balloon.targetRadius + 0.3);
+    balloon.glowColor = 0xff6b35;
+    balloon.glowIntensity = 0.6;
   }
 
   renderGizmo(
-    graphics: Phaser.GameObjects.Graphics,
+    g: Phaser.GameObjects.Graphics,
     x: number,
     y: number,
     radius: number,
     time: number
   ): void {
-    // Warm shimmer — wavy circle
-    const segments = 32;
-    const alpha = 0.15 + Math.sin(time * 0.004) * 0.05;
-    graphics.lineStyle(1.5, this.color, alpha);
-    graphics.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const a = (i / segments) * Math.PI * 2;
-      const wobble = Math.sin(a * 4 + time * 0.005) * 3;
-      const r = radius * 0.85 + wobble;
-      const px = x + Math.cos(a) * r;
-      const py = y + Math.sin(a) * r;
-      if (i === 0) graphics.moveTo(px, py);
-      else graphics.lineTo(px, py);
+    // Radial gradient rings
+    const pulse = Math.sin(time * 0.003) * 0.05 + 0.95;
+    for (let r = 0.2; r <= 1.0; r += 0.15) {
+      const rr = radius * r * pulse;
+      const alpha = 0.12 * (1 - r);
+      g.lineStyle(1, this.color, alpha);
+      g.strokeCircle(x, y, rr);
     }
-    graphics.strokePath();
-    // Inner glow
-    graphics.fillStyle(this.color, 0.04);
-    graphics.fillCircle(x, y, radius * 0.5);
+
+    // Outward pointing vector arrows in a grid
+    const step = 35;
+    const arrowLen = 10;
+    for (let ax = x - radius; ax <= x + radius; ax += step) {
+      for (let ay = y - radius; ay <= y + radius; ay += step) {
+        const ddx = ax - x;
+        const ddy = ay - y;
+        const d = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (d < 15 || d > radius * 0.95) continue;
+        const falloff = 1 - d / radius;
+        const nx = ddx / d;
+        const ny = ddy / d;
+        const alpha = 0.35 * falloff;
+        g.lineStyle(1.5, this.color, alpha);
+
+        const endX = ax + nx * arrowLen;
+        const endY = ay + ny * arrowLen;
+        g.lineBetween(ax, ay, endX, endY);
+        // Arrowhead
+        const ha = 0.5;
+        const hl = 4;
+        const angle = Math.atan2(ny, nx);
+        g.lineBetween(endX, endY, endX - Math.cos(angle - ha) * hl, endY - Math.sin(angle - ha) * hl);
+        g.lineBetween(endX, endY, endX - Math.cos(angle + ha) * hl, endY - Math.sin(angle + ha) * hl);
+      }
+    }
   }
 }

@@ -25,7 +25,7 @@ export interface LevelConfig {
 // Level definitions
 // ──────────────────────────────────────────────────
 
-const TOOLBAR_WIDTH = 90;
+const TOOLBAR_WIDTH = 80;
 const PADDING = 20;
 const CHAMBER_X = TOOLBAR_WIDTH + PADDING;
 const CHAMBER_Y = PADDING;

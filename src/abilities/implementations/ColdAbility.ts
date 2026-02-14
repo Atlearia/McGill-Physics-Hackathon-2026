@@ -1,16 +1,20 @@
-import { PhysicsAbility } from '../PhysicsAbility';
+import { PhysicsAbility, VisualMode } from '../PhysicsAbility';
 
 /**
- * Slows balloon motion (increases damping) — cold zone.
+ * Cold — Thermal Contraction
+ * Shrinks balloon radius, increases density (falls faster).
+ * Visual: icy blue crystalline texture.
  */
 export class ColdAbility extends PhysicsAbility {
   readonly id = 'cold';
-  readonly name = 'Cold';
+  readonly name = 'ΔT↓';
+  readonly displayName = 'Thermal Contraction';
   readonly iconKey = 'icon-cold';
-  readonly category = 'temperature';
-  readonly radius = 70;
+  readonly category = 'thermodynamics';
+  readonly radius = 200;
   readonly color = 0x80deea;
-  strength = 0.92; // velocity damping multiplier per frame
+  readonly visualMode: VisualMode = 'vectors';
+  strength = 0.0003;
 
   applyEffect(
     _scene: Phaser.Scene,
@@ -20,47 +24,59 @@ export class ColdAbility extends PhysicsAbility {
     _dy: number,
     _dt: number
   ): void {
-    // Slow down velocity — stronger near center
+    // Increase effective downward pull (denser = heavier)
     const falloff = 1 - dist / this.radius;
-    const damping = 1 - (1 - this.strength) * falloff;
-    const vel = (body as any).velocity;
-    // Apply as opposing force (damping)
-    (body as any).force.x += vel.x * (damping - 1) * 0.02;
-    (body as any).force.y += vel.y * (damping - 1) * 0.02;
+    (body as any).force.y += this.strength * falloff;
+  }
+
+  applyGlobalEffect(
+    _scene: Phaser.Scene,
+    _body: MatterJS.BodyType,
+    balloon: any,
+    _dt: number
+  ): void {
+    // Shrink balloon visually
+    balloon.targetRadius = Math.max(balloon.baseRadius * 0.5, balloon.targetRadius - 0.3);
+    balloon.glowColor = 0x80deea;
+    balloon.glowIntensity = 0.3;
   }
 
   renderGizmo(
-    graphics: Phaser.GameObjects.Graphics,
+    g: Phaser.GameObjects.Graphics,
     x: number,
     y: number,
     radius: number,
     time: number
   ): void {
-    // Frost sparkle — dashed circle with slow pulse
-    const alpha = 0.12 + Math.sin(time * 0.002) * 0.05;
-    graphics.lineStyle(1, this.color, alpha);
-    // Draw dashed circle
-    const segments = 24;
-    for (let i = 0; i < segments; i++) {
-      if (i % 2 === 0) {
-        const a1 = (i / segments) * Math.PI * 2;
-        const a2 = ((i + 1) / segments) * Math.PI * 2;
-        graphics.lineBetween(
-          x + Math.cos(a1) * radius * 0.85,
-          y + Math.sin(a1) * radius * 0.85,
-          x + Math.cos(a2) * radius * 0.85,
-          y + Math.sin(a2) * radius * 0.85
-        );
-      }
-    }
-    // Small snowflake-like dots
-    const numDots = 6;
+    // Icy shards / crystalline lines
     const phase = time * 0.001;
-    graphics.fillStyle(this.color, 0.2);
-    for (let i = 0; i < numDots; i++) {
-      const a = (i / numDots) * Math.PI * 2 + phase;
-      const r = radius * 0.5;
-      graphics.fillCircle(x + Math.cos(a) * r, y + Math.sin(a) * r, 2);
+    const numShards = 12;
+    for (let i = 0; i < numShards; i++) {
+      const angle = (i / numShards) * Math.PI * 2 + phase;
+      const len = radius * (0.3 + Math.sin(angle * 3 + time * 0.002) * 0.15);
+      const sx = x + Math.cos(angle) * 20;
+      const sy = y + Math.sin(angle) * 20;
+      const ex = x + Math.cos(angle) * len;
+      const ey = y + Math.sin(angle) * len;
+      const alpha = 0.15 + Math.sin(angle * 2 + time * 0.003) * 0.05;
+      g.lineStyle(1, this.color, alpha);
+      g.lineBetween(sx, sy, ex, ey);
+
+      // Branch shards
+      const bAngle = angle + 0.3;
+      const bLen = len * 0.4;
+      const mx = x + Math.cos(angle) * len * 0.6;
+      const my = y + Math.sin(angle) * len * 0.6;
+      g.lineStyle(0.5, 0xb2ebf2, alpha * 0.7);
+      g.lineBetween(mx, my, mx + Math.cos(bAngle) * bLen, my + Math.sin(bAngle) * bLen);
+    }
+
+    // Frost dots
+    g.fillStyle(0xffffff, 0.12);
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2 + phase * 0.5;
+      const r = radius * (0.3 + (i % 3) * 0.2);
+      g.fillCircle(x + Math.cos(a) * r, y + Math.sin(a) * r, 1.5);
     }
   }
 }

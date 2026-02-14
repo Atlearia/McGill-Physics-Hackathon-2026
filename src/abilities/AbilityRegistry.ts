@@ -1,10 +1,14 @@
 import { PhysicsAbility } from './PhysicsAbility';
-import { LowPressureAbility } from './implementations/LowPressureAbility';
-import { HighPressureAbility } from './implementations/HighPressureAbility';
 import { HeatAbility } from './implementations/HeatAbility';
 import { ColdAbility } from './implementations/ColdAbility';
-import { GravityAbility } from './implementations/GravityAbility';
-import { WindJetAbility } from './implementations/WindJetAbility';
+import { MassAbility } from './implementations/MassAbility';
+import { DarkEnergyAbility } from './implementations/DarkEnergyAbility';
+import { HighPressureAbility } from './implementations/HighPressureAbility';
+import { VacuumAbility } from './implementations/VacuumAbility';
+import { TunnelingAbility } from './implementations/TunnelingAbility';
+import { ViscosityAbility } from './implementations/ViscosityAbility';
+import { ElasticityAbility } from './implementations/ElasticityAbility';
+import { EntropyAbility } from './implementations/EntropyAbility';
 
 /**
  * Registry of all available ability types.
@@ -63,10 +67,14 @@ class AbilityRegistryClass {
 
 export const AbilityRegistry = new AbilityRegistryClass();
 
-// Register all built-in abilities
-AbilityRegistry.register(new LowPressureAbility());
-AbilityRegistry.register(new HighPressureAbility());
+// Register all 10 abilities
 AbilityRegistry.register(new HeatAbility());
 AbilityRegistry.register(new ColdAbility());
-AbilityRegistry.register(new GravityAbility());
-AbilityRegistry.register(new WindJetAbility());
+AbilityRegistry.register(new MassAbility());
+AbilityRegistry.register(new DarkEnergyAbility());
+AbilityRegistry.register(new HighPressureAbility());
+AbilityRegistry.register(new VacuumAbility());
+AbilityRegistry.register(new TunnelingAbility());
+AbilityRegistry.register(new ViscosityAbility());
+AbilityRegistry.register(new ElasticityAbility());
+AbilityRegistry.register(new EntropyAbility());
