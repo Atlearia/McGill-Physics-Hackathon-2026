@@ -23,11 +23,12 @@ export function getLevelDefinitions() {
       id: 1,
       name: "Level 1 - Demo",
       spawn: { x: BOARD_RECT.x + 165, y: BOARD_RECT.y + 195 },
-      goal: { x: BOARD_RECT.x + 760, y: BOARD_RECT.y + 182, w: 16, h: 46 },
+      goal: { x: BOARD_RECT.x + 760, y: BOARD_RECT.y + 126, w: 16, h: 46 },
       rodColor: RAINBOW[0],
       trailColor: null,
       walls: LEVEL_1_WALLS.map((segment) => ({ ...segment })),
       hint: "Use Heat to expand and arc into the upper-right pocket.",
+      teaches: ["heat"],
     },
   ];
 }

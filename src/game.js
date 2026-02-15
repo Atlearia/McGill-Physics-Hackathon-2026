@@ -31,6 +31,8 @@ export class Game {
     this.toolInventory = createToolInventory();
     this.effects = [];
     this.lastGoalHitMs = 0;
+    this.levelClearedAtMs = 0;
+    this.runComplete = false;
 
     this.cat = {
       x: BOARD_RECT.x + 180,
@@ -64,6 +66,7 @@ export class Game {
     this.cat.radius = CAT.baseRadius;
     this.cat.targetRadius = CAT.baseRadius;
     this.cat.inTunnel = false;
+    this.levelClearedAtMs = 0;
   }
 
   start() {
@@ -105,7 +108,22 @@ export class Game {
 
     if (levelCleared) {
       this.lastGoalHitMs = nowMs;
+      if (this.levelClearedAtMs === 0) {
+        this.levelClearedAtMs = nowMs;
+      }
     }
+
+    if (this.levelClearedAtMs > 0 && nowMs - this.levelClearedAtMs > 850) {
+      this.advanceLevel();
+    }
+  }
+
+  advanceLevel() {
+    if (this.levelIndex < this.levels.length - 1) {
+      this.loadLevel(this.levelIndex + 1);
+      return;
+    }
+    this.runComplete = true;
   }
 
   handleUi(nowMs) {
@@ -182,6 +200,8 @@ export class Game {
       toolInventory: this.toolInventory,
       nowMs,
       goalPulse: nowMs - this.lastGoalHitMs < 320,
+      levelCleared: this.levelClearedAtMs > 0,
+      runComplete: this.runComplete,
     });
   }
 }

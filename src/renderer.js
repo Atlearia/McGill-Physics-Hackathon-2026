@@ -102,6 +102,7 @@ export class Renderer {
     this.drawBoard(state);
     this.drawModeToggle(state.mode);
     this.drawHint(state.level?.hint ?? "");
+    this.drawStatus(state);
   }
 
   drawBackground(mode) {
@@ -575,6 +576,26 @@ export class Renderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(text, BOARD_RECT.x + BOARD_RECT.w / 2, CANVAS_HEIGHT - 10);
+  }
+
+  drawStatus(state) {
+    const { ctx } = this;
+    if (state.runComplete) {
+      ctx.fillStyle = "rgba(223,255,240,0.95)";
+      ctx.font = "40px Times New Roman";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("LEVEL 1 COMPLETE", BOARD_RECT.x + BOARD_RECT.w / 2, BOARD_RECT.y + BOARD_RECT.h / 2);
+      return;
+    }
+
+    if (state.levelCleared) {
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font = "28px Times New Roman";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Level Cleared", BOARD_RECT.x + BOARD_RECT.w / 2, BOARD_RECT.y + BOARD_RECT.h / 2);
+    }
   }
 }
 
