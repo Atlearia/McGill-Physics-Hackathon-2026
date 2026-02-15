@@ -1,4 +1,4 @@
-:root { color-scheme: dark }
+:root { color-scheme: dark; --tool-block-gap: 14px }
 * { box-sizing: border-box; margin: 0; padding: 0 }
 html, body { width: 100%; height: 100%; overflow: hidden;
   font-family: 'Quicksand', 'Nunito', 'Segoe UI', sans-serif; color: #c8ccd0;
@@ -63,9 +63,9 @@ body { display: flex; flex-direction: column; background: #0a0c0e }
 #tool-list { flex: 1; padding: 6px 8px }
 
 /* Tool info blocks */
-#tool-info-list { flex: 1; padding: 4px 0; overflow-y: auto }
+#tool-info-list { flex: 1; padding: 8px 0; overflow-y: auto }
 .tool-info-block {
-  padding: 8px 12px; border-bottom: 1px solid rgba(0,255,180,0.08);
+  padding: var(--tool-block-gap) 12px; border-bottom: 1px solid rgba(0,255,180,0.08);
   transition: background 0.15s, border-color 0.2s;
 }
 .tool-info-block:last-child { border-bottom: none }

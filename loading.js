@@ -59,26 +59,50 @@ const ELEMENTS = [
     }
   }
 
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    screen.classList.add("fade-out");
+    if (topbar)    { topbar.style.transition = "opacity 0.5s ease"; topbar.style.opacity = "1"; }
+    if (main)      { main.style.transition = "opacity 0.5s ease"; main.style.opacity = "1"; }
+    if (bottombar) { bottombar.style.transition = "opacity 0.5s ease"; bottombar.style.opacity = "1"; }
+    // Autoplay BGM after loading (user interaction unlocks audio policy)
+    if (typeof audio !== "undefined" && audio.startBGM) audio.startBGM();
+    setTimeout(() => { screen.remove(); }, FADE_DURATION + 100);
+  }
+
+  let dismissed = false;
+
   function advance() {
+    if (dismissed) return;
     if (step < ELEMENTS.length) {
       showStep(step);
       step++;
       const delay = step === ELEMENTS.length ? FINAL_HOLD : STEP_DELAY;
       setTimeout(advance, delay);
     } else {
-      // Transition out
-      screen.classList.add("fade-out");
-
-      // Fade in the game UI
-      if (topbar)    { topbar.style.transition = "opacity 0.5s ease"; topbar.style.opacity = "1"; }
-      if (main)      { main.style.transition = "opacity 0.5s ease"; main.style.opacity = "1"; }
-      if (bottombar) { bottombar.style.transition = "opacity 0.5s ease"; bottombar.style.opacity = "1"; }
-
-      setTimeout(() => {
-        screen.remove();
-      }, FADE_DURATION + 100);
+      dismiss();
     }
   }
+
+  // Skip on 3 rapid spacebar presses
+  let spaceCount = 0;
+  let spaceTimer = null;
+  document.addEventListener("keydown", function onSkip(e) {
+    if (dismissed) { document.removeEventListener("keydown", onSkip); return; }
+    if (e.code !== "Space") return;
+    e.preventDefault();
+    spaceCount++;
+    clearTimeout(spaceTimer);
+    spaceTimer = setTimeout(() => { spaceCount = 0; }, 800);
+    if (spaceCount >= 3) {
+      document.removeEventListener("keydown", onSkip);
+      dismiss();
+    }
+  });
+
+  // Click anywhere on loading screen also counts as interaction (helps autoplay)
+  screen.addEventListener("click", () => {});
 
   // Start after a brief initial pause
   setTimeout(advance, 350);
