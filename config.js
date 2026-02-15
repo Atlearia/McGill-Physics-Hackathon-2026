@@ -1,7 +1,7 @@
 // ─── CONSTANTS ───────────────────────────────────────────────
 const W = 1500, H = 1000;
 const BOARD = { x: 260, y: 60, w: 1180, h: 880 };
-const SIDEBAR = { x: 128, y: 200, w: 84, h: 560, r: 8, gap: 2, pad: 6 };
+const SIDEBAR = { x: 100, y: 111, w: 126, h: 778, r: 10, gap: 2, pad: 6 };
 const LENS_R = 230;
 const TOOL_R = LENS_R * 1.45;
 const MAX_SPEED = 980;

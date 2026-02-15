@@ -80,6 +80,12 @@ body { display: flex; flex-direction: column; background: #0a0c0e }
   font-family: 'Times New Roman', serif; min-width: 40px; text-align: center;
   transition: color 0.3s;
 }
+.tool-info-icon {
+  display: none; width: 32px; height: 32px; object-fit: contain;
+  border-radius: 6px; flex-shrink: 0;
+}
+body.normal-mode .tool-info-symbol { display: none }
+body.normal-mode .tool-info-icon { display: block }
 .tool-info-block.active .tool-info-symbol { color: #00ffc8 }
 .tool-info-name {
   font-size: 16px; font-weight: 600; color: rgba(0,255,180,0.75);

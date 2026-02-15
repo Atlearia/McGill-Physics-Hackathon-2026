@@ -6,6 +6,22 @@ catNormalSprite.src = "Assets/VisualExamples/cat_normal.png";
 const normalBgImage = new Image();
 normalBgImage.src = "Assets/VisualExamples/background.png";
 
+// Tool icon sprites (normal mode)
+const toolIconSprites = {};
+const TOOL_ICON_MAP = {
+  heat: "Assets/VisualExamples/heat.png",
+  cold: "Assets/VisualExamples/cold.png",
+  mass: "Assets/VisualExamples/gravity.png",
+  highPressure: "Assets/VisualExamples/pressure.png",
+  vacuum: "Assets/VisualExamples/vacuum.png",
+  tunneling: "Assets/VisualExamples/quantum.png"
+};
+for (const [id, src] of Object.entries(TOOL_ICON_MAP)) {
+  const img = new Image();
+  img.src = src;
+  toolIconSprites[id] = img;
+}
+
 // ─── GOAL ROD (NEON STICK) ───────────────────────────────────
 function drawGoalRod(ctx) {
   const rod = state.goalRod;
@@ -336,21 +352,47 @@ function drawSidebar(ctx) {
       const color = isActive ? "#00ffc8" : (isHovered ? "rgba(0,230,180,0.7)" : "rgba(0,230,180,0.45)");
       drawGlyph(ctx, t.id, rect, color);
     } else {
-      // Normal mode: placeholder colored circle with tool initial
+      // Normal mode: tool icon sprite
       const cx = rect.x + rect.w * 0.5;
       const cy = rect.y + rect.h * 0.5;
+      const iconImg = toolIconSprites[t.id];
+      const iconSize = Math.min(rect.w, rect.h) * 0.72;
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-      const hexA = isActive ? "55" : (isHovered ? "33" : "1a");
-      ctx.fillStyle = t.accent + hexA;
-      ctx.strokeStyle = t.accent + (isActive ? "cc" : (isHovered ? "99" : "55"));
-      ctx.lineWidth = 2;
-      ctx.fill(); ctx.stroke();
-      ctx.font = "bold 16px 'Quicksand', sans-serif";
-      ctx.fillStyle = t.accent + (isActive ? "ff" : (isHovered ? "cc" : "88"));
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(t.name.charAt(0).toUpperCase(), cx, cy + 1);
+
+      // Pink-purple background pill behind each icon
+      const bgPad = 7;
+      const bgX = rect.x + bgPad;
+      const bgY = rect.y + bgPad;
+      const bgW = rect.w - bgPad * 2;
+      const bgH = rect.h - bgPad * 2;
+      const bgGrad = ctx.createLinearGradient(bgX, bgY, bgX + bgW, bgY + bgH);
+      bgGrad.addColorStop(0, "rgba(140,60,200,0.40)");
+      bgGrad.addColorStop(0.5, "rgba(230,130,220,0.38)");
+      bgGrad.addColorStop(1, "rgba(255,240,255,0.35)");
+      ctx.fillStyle = bgGrad;
+      roundRect(ctx, bgX, bgY, bgW, bgH, 15);
+      ctx.fill();
+
+      if (iconImg && iconImg.complete && iconImg.naturalWidth) {
+        ctx.globalAlpha = isActive ? 1 : (isHovered ? 0.85 : 0.65);
+        if (isActive || isHovered) {
+          ctx.shadowColor = t.accent;
+          ctx.shadowBlur = isActive ? 18 : 10;
+        }
+        ctx.drawImage(iconImg, cx - iconSize * 0.5, cy - iconSize * 0.5, iconSize, iconSize);
+      } else {
+        // Fallback circle if sprite not loaded
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+        ctx.fillStyle = t.accent + "1a";
+        ctx.strokeStyle = t.accent + "55";
+        ctx.lineWidth = 2;
+        ctx.fill(); ctx.stroke();
+        ctx.font = "bold 16px 'Quicksand', sans-serif";
+        ctx.fillStyle = t.accent + "88";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(t.name.charAt(0).toUpperCase(), cx, cy + 1);
+      }
       ctx.restore();
     }
   }

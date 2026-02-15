@@ -127,8 +127,8 @@ setTimeout(fit, 100);
 const TOOL_SYMBOLS = { heat: "\u2191\u0394T", cold: "\u2193\u0394T", mass: "M\u2299", highPressure: "\u21c8P", vacuum: "\u21ca P", tunneling: "\u03a8\u22a5" };
 const TOOL_HACKER_SYMBOLS = { heat: "\u2202T", cold: "\u2202T", mass: "G\u2297", highPressure: "\u2202P", vacuum: "u\u1d63", tunneling: "\u03a8\u22a5" };
 const TOOL_DESCRIPTIONS = {
-  heat: "Thermal expansion\u2002\u00b7\u2002Increases radius",
-  cold: "Cryogenic compression\u2002\u00b7\u2002Shrinks radius",
+  heat: "Thermal expansion\u2002\u00b7\u2002",
+  cold: "Cryogenic compression\u2002\u00b7\u2002",
   mass: "Gravity well\u2002\u00b7\u2002Weak attraction",
   highPressure: "Pressure wave\u2002\u00b7\u2002Push impulse",
   vacuum: "Vacuum pull\u2002\u00b7\u2002Inward impulse",
@@ -157,6 +157,15 @@ const TOOL_DESCRIPTIONS = {
   });
 })();
 
+const TOOL_ICON_PATHS = {
+  heat: "Assets/VisualExamples/heat.png",
+  cold: "Assets/VisualExamples/cold.png",
+  mass: "Assets/VisualExamples/gravity.png",
+  highPressure: "Assets/VisualExamples/pressure.png",
+  vacuum: "Assets/VisualExamples/vacuum.png",
+  tunneling: "Assets/VisualExamples/quantum.png"
+};
+
 // ─── BUILD LEFT PANEL TOOL INFO BLOCKS ───────────────────────
 (function buildToolInfoList() {
   const list = document.getElementById("tool-info-list");
@@ -165,9 +174,11 @@ const TOOL_DESCRIPTIONS = {
     const block = document.createElement("div");
     block.className = "tool-info-block";
     block.dataset.toolIndex = i;
+    const iconSrc = TOOL_ICON_PATHS[t.id] || "";
     block.innerHTML =
       '<div class="tool-info-top">' +
         '<span class="tool-info-symbol">' + (TOOL_HACKER_SYMBOLS[t.id] || "?") + '</span>' +
+        '<img class="tool-info-icon" src="' + iconSrc + '" alt="' + t.name + '">' +
         '<span class="tool-info-name">' + t.name + '</span>' +
       '</div>' +
       '<div class="tool-info-eq">' + t.equation + '</div>';
