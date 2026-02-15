@@ -3,6 +3,7 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   COLORS,
+  HACKER_LENS_RADIUS,
   MODES,
   MODE_TOGGLE_RECT,
   SIDEBAR_LAYOUT,
@@ -177,6 +178,7 @@ export class Renderer {
 
   drawBoard(state) {
     const { ctx } = this;
+    const nowMs = state.nowMs ?? performance.now();
     ctx.save();
     ctx.beginPath();
     ctx.rect(BOARD_RECT.x, BOARD_RECT.y, BOARD_RECT.w, BOARD_RECT.h);
@@ -193,12 +195,17 @@ export class Renderer {
     }
 
     this.drawGoal(state.level?.goal, state.level?.rodColor ?? "#ff3b3b", state.goalPulse);
-    this.drawWalls(state.level?.walls ?? [], state.mode, state.nowMs ?? performance.now());
-    this.drawEffects(state.effects ?? [], state.nowMs ?? performance.now());
-    this.drawTrail(state.trailNodes ?? [], state.nowMs ?? performance.now());
-    if (state.draggingTool && state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
-      this.drawEffectPreview(state.draggingTool, state.pointer.x, state.pointer.y);
+    this.drawWalls(state.level?.walls ?? [], state.mode, nowMs);
+
+    if (state.mode === MODES.HACKER) {
+      if (state.lensActive && state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
+        this.drawOverlayLayer(state, nowMs, true);
+      }
+    } else {
+      this.drawOverlayLayer(state, nowMs, false);
     }
+
+    this.drawTrail(state.trailNodes ?? [], nowMs);
     this.drawCat(state.cat, state.mode);
 
     ctx.restore();
@@ -206,6 +213,9 @@ export class Renderer {
     ctx.strokeStyle = "rgba(255,255,255,0.95)";
     ctx.lineWidth = 4;
     ctx.strokeRect(BOARD_RECT.x, BOARD_RECT.y, BOARD_RECT.w, BOARD_RECT.h);
+    if (state.mode === MODES.HACKER && state.lensActive && state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
+      this.drawLensRing(state.pointer.x, state.pointer.y);
+    }
   }
 
   drawGoal(goal, color, pulse) {
@@ -227,7 +237,7 @@ export class Renderer {
     for (const segment of walls) {
       ctx.save();
       const tunnelActive = segment.tunnelUntilMs > nowMs;
-      if (tunnelActive) {
+      if (tunnelActive && mode === MODES.NORMAL) {
         ctx.fillStyle = "rgba(8,8,8,0.35)";
         ctx.fillRect(segment.x, segment.y, segment.w, segment.h);
         ctx.strokeStyle = "rgba(245,245,245,0.84)";
@@ -265,6 +275,29 @@ export class Renderer {
     }
   }
 
+  drawOverlayLayer(state, nowMs, clipToLens) {
+    const { ctx } = this;
+    if (clipToLens && state.pointer) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(state.pointer.x, state.pointer.y, HACKER_LENS_RADIUS, 0, Math.PI * 2);
+      ctx.clip();
+    }
+
+    this.drawEffects(state.effects ?? [], nowMs, state.level?.walls ?? []);
+
+    if (state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
+      const previewTool = state.draggingTool || state.selectedTool;
+      if (previewTool) {
+        this.drawEffectPreview(previewTool, state.pointer.x, state.pointer.y);
+      }
+    }
+
+    if (clipToLens && state.pointer) {
+      ctx.restore();
+    }
+  }
+
   drawCat(cat, mode) {
     if (!cat) {
       return;
@@ -297,7 +330,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawEffects(effects, nowMs) {
+  drawEffects(effects, nowMs, walls) {
     for (const effect of effects) {
       if (effect.toolId === "heat") {
         this.drawHeatEffect(effect.x, effect.y, effect.radius, effect.remainingMs / 2000);
@@ -307,6 +340,8 @@ export class Renderer {
         this.drawMassEffect(effect.x, effect.y, effect.radius, effect.remainingMs / Math.max(effect.lifetimeMs, 1));
       } else if (effect.toolId === "highPressure" || effect.toolId === "vacuum") {
         this.drawImpulseParticles(effect, nowMs);
+      } else if (effect.toolId === "tunneling") {
+        this.drawTunnelEffect(effect, nowMs, walls);
       }
     }
   }
@@ -547,6 +582,48 @@ export class Renderer {
     ctx.restore();
   }
 
+  drawTunnelEffect(effect, nowMs, walls) {
+    const wall = walls.find((item) => item.id === effect.tunnelWallId);
+    if (!wall) {
+      return;
+    }
+    const { ctx } = this;
+    const life = Math.max(1, effect.lifetimeMs || 1);
+    const remaining = Math.max(0, 1 - (nowMs - effect.createdAt) / life);
+    ctx.save();
+    ctx.fillStyle = `rgba(255,255,255,${0.12 + remaining * 0.2})`;
+    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+    ctx.strokeStyle = `rgba(250,250,250,${0.35 + remaining * 0.45})`;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 8; i += 1) {
+      const yy = wall.y + (i / 7) * wall.h;
+      ctx.beginPath();
+      ctx.moveTo(wall.x, yy);
+      ctx.lineTo(wall.x + wall.w, yy + (i % 2 === 0 ? 4 : -4));
+      ctx.stroke();
+    }
+    for (let i = 0; i < 26; i += 1) {
+      const px = wall.x + (((Math.sin(effect.seed + i * 1.7 + nowMs * 0.02) + 1) / 2) * wall.w);
+      const py = wall.y + (((Math.cos(effect.seed + i * 2.2 + nowMs * 0.018) + 1) / 2) * wall.h);
+      ctx.fillStyle = `rgba(255,255,255,${0.2 + ((i * 3) % 7) * 0.08})`;
+      ctx.fillRect(px, py, 1.8, 1.8);
+    }
+    ctx.restore();
+  }
+
+  drawLensRing(x, y) {
+    const { ctx } = this;
+    ctx.save();
+    ctx.strokeStyle = "rgba(150,255,170,0.85)";
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "rgba(100,255,122,0.85)";
+    ctx.beginPath();
+    ctx.arc(x, y, HACKER_LENS_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   drawTrail(nodes, nowMs) {
     if (!nodes || nodes.length < 2) {
       return;
@@ -613,7 +690,7 @@ export class Renderer {
       ctx.font = "40px Times New Roman";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("LEVEL 1 COMPLETE", BOARD_RECT.x + BOARD_RECT.w / 2, BOARD_RECT.y + BOARD_RECT.h / 2);
+      ctx.fillText("JUDGE RUN COMPLETE", BOARD_RECT.x + BOARD_RECT.w / 2, BOARD_RECT.y + BOARD_RECT.h / 2);
       return;
     }
 

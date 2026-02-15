@@ -56,3 +56,5 @@ export const CAT = {
   accel: 800,
   drag: 0.9,
 };
+
+export const HACKER_LENS_RADIUS = 152;

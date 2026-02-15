@@ -223,6 +223,10 @@ export class Game {
     if (!this.renderer) {
       return;
     }
+    const lensActive =
+      this.mode === MODES.HACKER &&
+      Boolean(this.selectedTool) &&
+      insideRect(this.input.pointer.x, this.input.pointer.y, BOARD_RECT);
     this.renderer.render({
       mode: this.mode,
       level: this.level,
@@ -238,6 +242,7 @@ export class Game {
       levelCleared: this.levelClearedAtMs > 0,
       runComplete: this.runComplete,
       trailNodes: this.trail.toArray(),
+      lensActive,
     });
   }
 }
