@@ -488,8 +488,9 @@ export class Renderer {
     ctx.strokeStyle = "rgba(255,255,255,0.76)";
     ctx.lineWidth = 1.3;
     for (let i = 0; i < count; i += 1) {
-      const a = (i / count) * Math.PI * 2;
-      const spread = effect.radius * (0.25 + (i % 7) * 0.08);
+      const jitter = ((Math.sin(effect.seed + i * 12.17) + 1) / 2) * 0.08 - 0.04;
+      const a = (i / count) * Math.PI * 2 + jitter;
+      const spread = effect.radius * (0.25 + ((i + Math.floor(effect.seed)) % 7) * 0.08);
       const startR = inward ? spread : spread * t;
       const endR = inward ? spread * (1 - t) : spread * (0.1 + t);
       const sx = effect.x + Math.cos(a) * startR;

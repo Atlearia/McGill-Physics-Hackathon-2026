@@ -149,9 +149,13 @@ export class PhysicsEngine {
       const dx = state.cat.x - effect.x;
       const dy = state.cat.y - effect.y;
       const dist = Math.hypot(dx, dy) || 1;
+      if (dist > effect.radius) {
+        effect.applied = true;
+        continue;
+      }
       const nx = dx / dist;
       const ny = dy / dist;
-      const scale = effect.impulse * Math.max(0.12, 1 - dist / effect.radius);
+      const scale = effect.impulse * Math.max(0.22, 1 - dist / effect.radius);
       const sign = effect.toolId === "highPressure" ? 1 : -1;
 
       state.cat.vx += nx * scale * sign;

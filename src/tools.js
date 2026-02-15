@@ -28,7 +28,7 @@ export const TOOL_DEFINITIONS = {
     ...TOOL_META.highPressure,
     kind: "impulse",
     radius: 190,
-    impulse: 630,
+    impulse: 720,
     particleLifetimeMs: 620,
     sfx: "pressure",
   },
@@ -36,7 +36,7 @@ export const TOOL_DEFINITIONS = {
     ...TOOL_META.vacuum,
     kind: "impulse",
     radius: 230,
-    impulse: 630,
+    impulse: 720,
     particleLifetimeMs: 680,
     sfx: "vacuum",
   },
@@ -94,5 +94,6 @@ export function createPlacedEffect(toolId, x, y, nowMs) {
     impulse: def.impulse ?? 0,
     applied: false,
     tunnelWallId: null,
+    seed: Math.random() * 1000,
   };
 }
