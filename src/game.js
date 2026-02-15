@@ -1,5 +1,6 @@
 import { BOARD_RECT, CAT, MODE_TOGGLE_RECT, MODES, TOOL_IDS } from "./config.js";
-import { loadImages } from "./assets.js";
+import { getAudioPaths, loadImages } from "./assets.js";
+import { AudioManager } from "./audio.js";
 import { InputHandler } from "./input.js";
 import { getLevelDefinitions } from "./levels.js";
 import { PhysicsEngine } from "./physics.js";
@@ -22,6 +23,7 @@ export class Game {
     this.input = new InputHandler(canvas);
     this.renderer = null;
     this.physics = new PhysicsEngine();
+    this.audio = null;
 
     this.levels = getLevelDefinitions();
     this.levelIndex = 0;
@@ -51,6 +53,7 @@ export class Game {
   async init() {
     this.images = await loadImages();
     this.renderer = new Renderer(this.ctx, this.images);
+    this.audio = new AudioManager(getAudioPaths());
     this.loadLevel(0);
   }
 
@@ -79,6 +82,7 @@ export class Game {
       return;
     }
     this.running = true;
+    this.audio?.setMode(this.mode);
     this.lastTs = performance.now();
     requestAnimationFrame((ts) => this.loop(ts));
   }
@@ -153,13 +157,18 @@ export class Game {
   handleUi(nowMs) {
     if (this.input.consumeModeToggle()) {
       this.mode = this.mode === MODES.NORMAL ? MODES.HACKER : MODES.NORMAL;
+      this.audio?.setMode(this.mode);
     }
 
     const pointer = this.input.pointer;
+    if (pointer.justPressed) {
+      this.audio?.unlock();
+    }
 
     if (pointer.justPressed) {
       if (insideRect(pointer.x, pointer.y, MODE_TOGGLE_RECT)) {
         this.mode = this.mode === MODES.NORMAL ? MODES.HACKER : MODES.NORMAL;
+        this.audio?.setMode(this.mode);
         return;
       }
 
@@ -189,10 +198,12 @@ export class Game {
             effect.tunnelWallId = targetWall.id;
             this.effects.push(effect);
             consumeToolUse(this.toolInventory, this.draggingTool);
+            this.audio?.playSfx(TOOL_DEFINITIONS[this.draggingTool].sfx);
           }
         } else {
           this.effects.push(createPlacedEffect(this.draggingTool, pointer.x, pointer.y, nowMs));
           consumeToolUse(this.toolInventory, this.draggingTool);
+          this.audio?.playSfx(TOOL_DEFINITIONS[this.draggingTool].sfx);
         }
       }
       this.draggingTool = null;
