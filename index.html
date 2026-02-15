@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Neon Cat</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #020207;
+        color: #fff;
+        font-family: "Times New Roman", serif;
+      }
+
+      .app {
+        width: min(100vw - 16px, 1408px);
+      }
+
+      #gameCanvas {
+        width: 100%;
+        height: auto;
+        border: 1px solid #222;
+        box-shadow: 0 0 24px rgba(135, 98, 255, 0.2);
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <canvas id="gameCanvas" width="1408" height="768"></canvas>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
