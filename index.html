@@ -8,8 +8,29 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="loading.css">
 </head>
 <body>
+  <!-- ─── LOADING SCREEN ──────────────────────────────── -->
+  <div id="loading-screen">
+    <div id="loading-title">The Neon Cat</div>
+    <div id="element-card">
+      <span id="element-number">1</span>
+      <span id="element-symbol">H</span>
+      <span id="element-name">Hydrogen</span>
+      <span id="element-mass">1.008 u</span>
+    </div>
+    <div id="loading-progress">
+      <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
+      <div id="loading-step-display">
+        <span id="loading-current">1</span>
+        <span id="loading-separator">/</span>
+        <span id="loading-total">10</span>
+      </div>
+      <div id="loading-label">Initializing Elements</div>
+    </div>
+  </div>
+
   <!-- ─── TOP BAR ─────────────────────────────────────── -->
   <div id="topbar">
     <span id="topbar-title">The Neon Cat</span>
@@ -60,5 +81,6 @@
   <script src="abilities/tunneling.js"></script>
   <script src="abilities/index.js"></script>
   <script src="game.js"></script>
+  <script src="loading.js"></script>
 </body>
 </html>
