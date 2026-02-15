@@ -1,45 +1,64 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>The Neon Cat</title>
-    <style>
-      :root {
-        color-scheme: dark;
-      }
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Neon Cat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ─── TOP BAR ─────────────────────────────────────── -->
+  <div id="topbar">
+    <span id="topbar-title">The Neon Cat</span>
+    <span id="topbar-equation"></span>
+    <label id="hacker-toggle">
+      <input type="checkbox" id="hacker-cb" checked>
+      <span class="cb-box"></span>
+      Hacker Mode
+    </label>
+  </div>
 
-      * {
-        box-sizing: border-box;
-      }
+  <!-- ─── MAIN LAYOUT ─────────────────────────────────── -->
+  <div id="main">
+    <!-- LEFT PANEL: Abilities -->
+    <div id="left-panel">
+      <div class="panel-header">Abilities</div>
+      <div id="tool-list"></div>
+    </div>
 
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #020207;
-        color: #fff;
-        font-family: "Times New Roman", serif;
-      }
+    <!-- CENTER: Game Canvas -->
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
 
-      .app {
-        width: min(100vw - 16px, 1408px);
-      }
+    <!-- RIGHT PANEL: Stats (hacker mode) -->
+    <div id="right-panel">
+      <div class="panel-header">// PHYSICS TELEMETRY</div>
+      <div id="stats-body"></div>
+    </div>
+  </div>
 
-      #gameCanvas {
-        width: 100%;
-        height: auto;
-        border: 1px solid #222;
-        box-shadow: 0 0 24px rgba(135, 98, 255, 0.2);
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <main class="app">
-      <canvas id="gameCanvas" width="1408" height="768"></canvas>
-    </main>
-    <script type="module" src="./src/main.js"></script>
-  </body>
+  <!-- ─── BOTTOM BAR ──────────────────────────────────── -->
+  <div id="bottombar">
+    <span id="bottom-info"></span>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="physics.js"></script>
+  <script src="rendering.js"></script>
+  <script src="tools.js"></script>
+  <script src="levels.js"></script>
+  <script src="abilities/_registry.js"></script>
+  <script src="abilities/heat.js"></script>
+  <script src="abilities/cold.js"></script>
+  <script src="abilities/mass.js"></script>
+  <script src="abilities/highPressure.js"></script>
+  <script src="abilities/vacuum.js"></script>
+  <script src="abilities/tunneling.js"></script>
+  <script src="abilities/index.js"></script>
+  <script src="game.js"></script>
+</body>
 </html>
