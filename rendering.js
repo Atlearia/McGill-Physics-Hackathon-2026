@@ -203,6 +203,98 @@ function drawGlyph(ctx, id, rect, color) {
   ctx.restore();
 }
 
+// ─── CANVAS SIDEBAR ─────────────────────────────────────────
+function drawSidebar(ctx) {
+  const isHacker = state.hackerMode;
+
+  ctx.save();
+
+  // Panel background
+  roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+  ctx.fillStyle = isHacker ? "rgba(6,10,14,0.94)" : "rgba(18,8,28,0.88)";
+  ctx.fill();
+
+  // Panel border
+  roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+  ctx.strokeStyle = isHacker ? "rgba(0,230,160,0.2)" : "rgba(160,80,220,0.25)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Right edge glow toward board
+  if (isHacker) {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,230,160,0.25)";
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = "rgba(0,230,160,0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(SIDEBAR.x + SIDEBAR.w, SIDEBAR.y + SIDEBAR.r);
+    ctx.lineTo(SIDEBAR.x + SIDEBAR.w, SIDEBAR.y + SIDEBAR.h - SIDEBAR.r);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Tool cells
+  for (let i = 0; i < TOOLS.length; i++) {
+    const t = TOOLS[i];
+    const rect = sidebarRect(i);
+    const isActive = state.activeTool === i && state.dragging;
+    const isHovered = typeof state.hoverTool !== "undefined" && state.hoverTool === i && !state.dragging;
+
+    // Active tool glow
+    if (isActive) {
+      ctx.save();
+      const gc = isHacker ? "0,255,200" : "200,120,255";
+      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 5);
+      ctx.fillStyle = "rgba(" + gc + ",0.14)";
+      ctx.shadowColor = "rgba(" + gc + ",0.5)";
+      ctx.shadowBlur = 22;
+      ctx.fill();
+      ctx.restore();
+    } else if (isHovered) {
+      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 5);
+      ctx.fillStyle = isHacker ? "rgba(0,255,180,0.06)" : "rgba(180,100,255,0.06)";
+      ctx.fill();
+    }
+
+    // Divider below cell
+    if (i < TOOLS.length - 1) {
+      const divY = rect.y + rect.h + SIDEBAR.gap * 0.5;
+      ctx.strokeStyle = isHacker ? "rgba(0,230,160,0.1)" : "rgba(160,80,220,0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rect.x + 10, divY);
+      ctx.lineTo(rect.x + rect.w - 10, divY);
+      ctx.stroke();
+    }
+
+    // Icon
+    if (isHacker) {
+      const color = isActive ? "#00ffc8" : (isHovered ? "rgba(0,230,180,0.7)" : "rgba(0,230,180,0.45)");
+      drawGlyph(ctx, t.id, rect, color);
+    } else {
+      // Normal mode: placeholder colored circle with tool initial
+      const cx = rect.x + rect.w * 0.5;
+      const cy = rect.y + rect.h * 0.5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      const hexA = isActive ? "55" : (isHovered ? "33" : "1a");
+      ctx.fillStyle = t.accent + hexA;
+      ctx.strokeStyle = t.accent + (isActive ? "cc" : (isHovered ? "99" : "55"));
+      ctx.lineWidth = 2;
+      ctx.fill(); ctx.stroke();
+      ctx.font = "bold 16px 'Quicksand', sans-serif";
+      ctx.fillStyle = t.accent + (isActive ? "ff" : (isHovered ? "cc" : "88"));
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(t.name.charAt(0).toUpperCase(), cx, cy + 1);
+      ctx.restore();
+    }
+  }
+
+  ctx.restore();
+}
+
 // ─── LIVE EQUATIONS ──────────────────────────────────────────
 function getLiveEquation(tool, b) {
   const spd = Math.hypot(b.vx, b.vy);
@@ -241,7 +333,19 @@ function draw() {
   const wallTheme = getWallTheme();
 
   // Background
-  ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, W, H);
+  if (state.hackerMode) {
+    ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, W, H);
+  } else {
+    // Normal mode: purple/dark gradient on left, dark board area
+    const bgG = ctx.createLinearGradient(0, 0, BOARD.x, 0);
+    bgG.addColorStop(0, "#12061a");
+    bgG.addColorStop(0.5, "#0e0818");
+    bgG.addColorStop(1, "#0c060f");
+    ctx.fillStyle = bgG;
+    ctx.fillRect(0, 0, BOARD.x, H);
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(BOARD.x, 0, W - BOARD.x, H);
+  }
 
   // Vignette
   const vig = ctx.createRadialGradient(W * .5, H * .45, W * .05, W * .5, H * .5, W * .63);
@@ -249,7 +353,7 @@ function draw() {
   vig.addColorStop(1, "rgba(0,0,0,0.48)"); ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
 
   // Background grid for mass
-  if (tool && tool.id === "mass") {
+  if (state.hackerMode && tool && tool.id === "mass") {
     ctx.save(); ctx.strokeStyle = "rgba(89,236,255,0.17)"; ctx.lineWidth = 1;
     for (let x = 0; x <= W; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y <= H; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -272,8 +376,8 @@ function draw() {
 
 
 
-  // Lens overlay (drag preview only)
-  if (state.dragging && tool) {
+  // Lens overlay (drag preview only — hacker mode only)
+  if (state.hackerMode && state.dragging && tool) {
     const showLens = tool.allowOutsideBoard || pointInBoard(pointer.x, pointer.y);
     if (showLens) {
       ctx.save();
@@ -492,6 +596,9 @@ function draw() {
     ctx.stroke(); ctx.restore();
   }
 
+  // Canvas sidebar
+  drawSidebar(ctx);
+
   // Update HTML panels
   updateHTMLPanels();
 }
@@ -505,21 +612,40 @@ function updateHTMLPanels() {
   const titleEl = document.getElementById("topbar-title");
   if (titleEl) titleEl.textContent = tool ? tool.title : "The Neon Cat";
 
-  // Equation (hacker mode only, while dragging a tool)
+  // Equation (hacker mode only, while dragging a tool) — hidden from topbar, moved to left panel
   const eqEl = document.getElementById("topbar-equation");
   if (eqEl) {
-    if (state.hackerMode && tool) {
-      eqEl.textContent = getLiveEquation(tool, b);
-      eqEl.classList.add("visible");
-    } else {
-      eqEl.classList.remove("visible");
-    }
+    eqEl.classList.remove("visible");
   }
 
   // Tool buttons highlight
   const btns = document.querySelectorAll(".tool-btn");
   btns.forEach((btn, i) => {
     btn.classList.toggle("dragging", state.dragging && i === state.activeTool);
+  });
+
+  // Left panel: tool info blocks
+  const leftHeader = document.getElementById("left-panel-header");
+  if (leftHeader) {
+    leftHeader.textContent = state.hackerMode ? "// FIELD MODELS" : "Abilities";
+  }
+  const toolBlocks = document.querySelectorAll(".tool-info-block");
+  toolBlocks.forEach((block, i) => {
+    const t = TOOLS[i];
+    const isActive = state.dragging && state.activeTool === i;
+    block.classList.toggle("active", isActive);
+    const symEl = block.querySelector(".tool-info-symbol");
+    const nameEl = block.querySelector(".tool-info-name");
+    const eqLine = block.querySelector(".tool-info-eq");
+    if (state.hackerMode) {
+      if (symEl) symEl.textContent = TOOL_HACKER_SYMBOLS[t.id] || "?";
+      if (nameEl) nameEl.textContent = t.name;
+      if (eqLine) eqLine.textContent = isActive ? getLiveEquation(t, b) : t.equation;
+    } else {
+      if (symEl) symEl.textContent = t.name.charAt(0).toUpperCase();
+      if (nameEl) nameEl.textContent = t.name;
+      if (eqLine) eqLine.textContent = TOOL_DESCRIPTIONS[t.id] || t.title;
+    }
   });
 
   // Right panel stats

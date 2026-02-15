@@ -10,7 +10,7 @@ defineAbility({
   equation: "u_r = \u2212k/r\u00b2",
 
   drawPreview(ctx, cx, cy) {
-    drawVectorField(ctx, cx, cy, true, "rgba(255,255,255,0.95)", true, 32, 26);
+    drawVectorField(ctx, cx, cy, true, "rgba(255,255,255,0.95)", false, 32, 14);
   },
 
   createEffect(x, y, b) {

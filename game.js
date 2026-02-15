@@ -16,7 +16,8 @@ const state = {
   disabledWalls: new Map(),
   tunnelPreview: null,
   toolUses: {},
-  hackerMode: true
+  hackerMode: true,
+  hoverTool: -1
 };
 for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
 
@@ -105,6 +106,15 @@ setTimeout(fit, 100);
 
 // ─── BUILD HTML TOOL BUTTONS ─────────────────────────────────
 const TOOL_SYMBOLS = { heat: "\u2191\u0394T", cold: "\u2193\u0394T", mass: "M\u2299", highPressure: "\u21c8P", vacuum: "\u21ca P", tunneling: "\u03a8\u22a5" };
+const TOOL_HACKER_SYMBOLS = { heat: "\u2202T", cold: "\u2202T", mass: "G\u2297", highPressure: "\u2202P", vacuum: "u\u1d63", tunneling: "\u03a8\u22a5" };
+const TOOL_DESCRIPTIONS = {
+  heat: "Thermal expansion\u2002\u00b7\u2002Increases radius",
+  cold: "Cryogenic compression\u2002\u00b7\u2002Shrinks radius",
+  mass: "Gravity well\u2002\u00b7\u2002Weak attraction",
+  highPressure: "Pressure wave\u2002\u00b7\u2002Push impulse",
+  vacuum: "Vacuum pull\u2002\u00b7\u2002Inward impulse",
+  tunneling: "Quantum tunnel\u2002\u00b7\u2002Phase through walls"
+};
 (function buildToolList() {
   const list = document.getElementById("tool-list");
   if (!list) return;
@@ -125,6 +135,24 @@ const TOOL_SYMBOLS = { heat: "\u2191\u0394T", cold: "\u2193\u0394T", mass: "M\u2
       }
     });
     list.appendChild(btn);
+  });
+})();
+
+// ─── BUILD LEFT PANEL TOOL INFO BLOCKS ───────────────────────
+(function buildToolInfoList() {
+  const list = document.getElementById("tool-info-list");
+  if (!list) return;
+  TOOLS.forEach((t, i) => {
+    const block = document.createElement("div");
+    block.className = "tool-info-block";
+    block.dataset.toolIndex = i;
+    block.innerHTML =
+      '<div class="tool-info-top">' +
+        '<span class="tool-info-symbol">' + (TOOL_HACKER_SYMBOLS[t.id] || "?") + '</span>' +
+        '<span class="tool-info-name">' + t.name + '</span>' +
+      '</div>' +
+      '<div class="tool-info-eq">' + t.equation + '</div>';
+    list.appendChild(block);
   });
 })();
 
@@ -173,10 +201,28 @@ function readPointer(e) {
 // Use document-level move/up so dragging from HTML tools onto canvas works
 document.addEventListener("pointermove", e => {
   readPointer(e);
+  // Sidebar hover tracking
+  state.hoverTool = -1;
+  for (let i = 0; i < TOOLS.length; i++) {
+    if (ptInRect(pointer.x, pointer.y, sidebarRect(i))) {
+      state.hoverTool = i;
+      break;
+    }
+  }
+  canvas.style.cursor = state.hoverTool >= 0 ? "pointer" : "";
 });
 canvas.addEventListener("pointerdown", e => {
   readPointer(e); pointer.down = true; pointer.pressed = true;
   audio.startBGM();
+  // Canvas sidebar tool selection
+  for (let i = 0; i < TOOLS.length; i++) {
+    const rect = sidebarRect(i);
+    if (ptInRect(pointer.x, pointer.y, rect) && state.toolUses[TOOLS[i].id] > 0) {
+      state.activeTool = i;
+      state.dragging = true;
+      return;
+    }
+  }
 });
 document.addEventListener("pointerup", e => {
   readPointer(e); pointer.down = false; pointer.released = true;
