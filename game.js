@@ -190,7 +190,7 @@ const TOOL_DESCRIPTIONS = {
     const uses = state.toolUses[t.id];
     btn.innerHTML = '<span class="tool-icon" style="color:' + t.accent + '">' + (TOOL_SYMBOLS[t.id] || "?") + '</span>'
       + '<span class="tool-label">' + t.name + '</span>'
-      + '<span class="tool-uses">\u00d7' + uses + '</span>';
+      + '<span class="tool-uses">' + (uses === Infinity ? '\u221e' : '\u00d7' + uses) + '</span>';
     btn.addEventListener("pointerdown", e => {
       e.preventDefault();
       audio.startBGM();
@@ -209,10 +209,11 @@ function refreshToolUsesUI() {
   const btns = document.querySelectorAll(".tool-btn");
   TOOLS.forEach((t, i) => {
     if (!btns[i]) return;
+    const uses = state.toolUses[t.id];
     const usesEl = btns[i].querySelector(".tool-uses");
-    if (usesEl) usesEl.textContent = "\u00d7" + state.toolUses[t.id];
-    // Grey out tools with 0 uses
-    btns[i].classList.toggle("tool-empty", state.toolUses[t.id] <= 0);
+    if (usesEl) usesEl.textContent = uses === Infinity ? "\u221e" : "\u00d7" + uses;
+    // Grey out tools with 0 uses (Infinity never grey)
+    btns[i].classList.toggle("tool-empty", uses !== Infinity && uses <= 0);
   });
 }
 
@@ -355,13 +356,15 @@ document.addEventListener("pointerup", e => {
       if (eff) {
         state.activeEffects.push(eff);
         audio.play(tool.sound);
-        state.toolUses[tool.id]--;
-        // Update HTML uses display
-        const btns = document.querySelectorAll(".tool-btn");
-        if (btns[state.activeTool]) {
-          const usesEl = btns[state.activeTool].querySelector(".tool-uses");
-          if (usesEl) usesEl.textContent = "\u00d7" + state.toolUses[tool.id];
-          btns[state.activeTool].classList.toggle("tool-empty", state.toolUses[tool.id] <= 0);
+        if (state.toolUses[tool.id] !== Infinity) {
+          state.toolUses[tool.id]--;
+          // Update HTML uses display
+          const btns = document.querySelectorAll(".tool-btn");
+          if (btns[state.activeTool]) {
+            const usesEl = btns[state.activeTool].querySelector(".tool-uses");
+            if (usesEl) usesEl.textContent = "\u00d7" + state.toolUses[tool.id];
+            btns[state.activeTool].classList.toggle("tool-empty", state.toolUses[tool.id] <= 0);
+          }
         }
       }
     }

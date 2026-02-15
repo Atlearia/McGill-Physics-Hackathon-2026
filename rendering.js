@@ -524,11 +524,11 @@ function drawSidebar(ctx) {
     // Use-count badge (bottom-right of cell)
     const uses = state.toolUses[t.id];
     if (uses != null) {
-      const badgeText = "" + uses;
-      const bx = rect.x + rect.w - 14;
-      const by = rect.y + rect.h - 10;
+      const badgeText = uses === Infinity ? "\u221e" : "" + uses;
+      const bx = rect.x + rect.w - 12;
+      const by = rect.y + rect.h - 8;
       ctx.save();
-      ctx.font = "bold 12px 'Quicksand', monospace";
+      ctx.font = "bold 18px 'Quicksand', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       if (uses <= 0) {
@@ -997,40 +997,24 @@ function draw() {
     const stripeCount = parsedPalette.length;
     const stripeWidth = Math.max(2.2, (b.radius * 2) / 7);
     const stripeSpacing = stripeWidth;
-    ctx.globalCompositeOperation = "screen";
-    for (let i = 1; i < trail.length; i++) {
+    const renderStep = stripeCount >= 4 ? 2 : 1;
+    const startIdx = Math.max(1, trail.length - 160 * renderStep);
+    for (let i = startIdx; i < trail.length; i += renderStep) {
       const prev = trail[i - 1], n = trail[i];
       const life = clamp(n.life, 0, 1);
-      const a = 0.25 + life * 0.75;
+      const a = 0.2 + life * 0.65;
       const segDx = n.x - prev.x, segDy = n.y - prev.y;
       const segLen = Math.hypot(segDx, segDy) || 1;
       const px = -segDy / segLen, py = segDx / segLen;
       const center = (stripeCount - 1) * 0.5;
       for (let s = 0; s < stripeCount; s++) {
         const c = parsedPalette[s];
-        const vivid = {
-          r: Math.min(255, Math.round(c.r * 1.15 + 18)),
-          g: Math.min(255, Math.round(c.g * 1.15 + 18)),
-          b: Math.min(255, Math.round(c.b * 1.15 + 18))
-        };
         const offset = (s - center) * stripeSpacing;
         const ox = px * offset, oy = py * offset;
-
-        // Outer glow pass
-        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.18 + a * 0.22})`;
-        ctx.lineWidth = stripeWidth * 1.45;
-        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.58 + a * 0.3})`;
-        ctx.shadowBlur = 14 + 10 * a;
-        ctx.beginPath();
-        ctx.moveTo(prev.x + ox, prev.y + oy);
-        ctx.lineTo(n.x + ox, n.y + oy);
-        ctx.stroke();
-
-        // Core stripe pass
-        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.5 + a * 0.45})`;
+        ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${a})`;
         ctx.lineWidth = stripeWidth;
-        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.72 + a * 0.22})`;
-        ctx.shadowBlur = 8 + 6 * a;
+        ctx.shadowColor = `rgba(${c.r},${c.g},${c.b},${0.16 + a * 0.18})`;
+        ctx.shadowBlur = 2 + 3 * a;
         ctx.beginPath();
         ctx.moveTo(prev.x + ox, prev.y + oy);
         ctx.lineTo(n.x + ox, n.y + oy);
