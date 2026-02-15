@@ -9,7 +9,7 @@ const BASE_DAMP = 0.60;
 const BASE_ELAST = 0.85;
 const BASE_RAD = 36;
 const BASE_MASS = 5;
-const TRAIL_MAX = 190;
+const TRAIL_MAX = 95;
 const DEFAULT_WALL_WIDTH = 20;
 const HACKER_CB_RECT = { x: W - 180, y: 10, w: 168, h: 30 };
 

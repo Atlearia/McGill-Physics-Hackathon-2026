@@ -848,6 +848,7 @@ function draw() {
       ctx.fillStyle = "rgba(255,255,255,0.92)";
       for (const eff of state.activeEffects) {
         if (eff.dead) continue;
+        if (eff.id === "tunneling") continue;  // no live equation for quantum
         const segments = getEffectLiveSegments(eff, b);
         if (!segments) continue;
         drawLiveEquation(ctx, segments, eff.x, eff.y - 55, 15);
@@ -997,27 +998,61 @@ function draw() {
     const stripeCount = parsedPalette.length;
     const stripeWidth = Math.max(2.2, (b.radius * 2) / 7);
     const stripeSpacing = stripeWidth;
-    const renderStep = stripeCount >= 4 ? 2 : 1;
-    const startIdx = Math.max(1, trail.length - 160 * renderStep);
-    for (let i = startIdx; i < trail.length; i += renderStep) {
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 1; i < trail.length; i++) {
       const prev = trail[i - 1], n = trail[i];
       const life = clamp(n.life, 0, 1);
-      const a = 0.2 + life * 0.65;
+      const fade = life * life;  // quadratic fade — tail fades to transparent
+      const a = fade;
       const segDx = n.x - prev.x, segDy = n.y - prev.y;
       const segLen = Math.hypot(segDx, segDy) || 1;
       const px = -segDy / segLen, py = segDx / segLen;
       const center = (stripeCount - 1) * 0.5;
+
+      // Compute smooth midpoints for quadratic curves
+      const mx0 = (prev.x + n.x) * 0.5, my0 = (prev.y + n.y) * 0.5;
+      const useCurve = i > 1 && i < trail.length - 1;
+      const next = useCurve ? trail[Math.min(i + 1, trail.length - 1)] : n;
+      const prevPrev = i > 1 ? trail[i - 2] : prev;
+      const mx1 = (prevPrev.x + prev.x) * 0.5, my1 = (prevPrev.y + prev.y) * 0.5;
+
       for (let s = 0; s < stripeCount; s++) {
         const c = parsedPalette[s];
+        const vivid = {
+          r: Math.min(255, Math.round(c.r * 1.15 + 18)),
+          g: Math.min(255, Math.round(c.g * 1.15 + 18)),
+          b: Math.min(255, Math.round(c.b * 1.15 + 18))
+        };
         const offset = (s - center) * stripeSpacing;
         const ox = px * offset, oy = py * offset;
-        ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${a})`;
-        ctx.lineWidth = stripeWidth;
-        ctx.shadowColor = `rgba(${c.r},${c.g},${c.b},${0.16 + a * 0.18})`;
-        ctx.shadowBlur = 2 + 3 * a;
+
+        // Outer glow pass
+        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${a * 0.4})`;
+        ctx.lineWidth = stripeWidth * 1.45;
+        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${a * 0.88})`;
+        ctx.shadowBlur = (14 + 10 * a) * fade;
+        ctx.lineCap = "round"; ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(prev.x + ox, prev.y + oy);
-        ctx.lineTo(n.x + ox, n.y + oy);
+        if (useCurve) {
+          ctx.quadraticCurveTo(n.x + ox, n.y + oy, mx0 + ox, my0 + oy);
+        } else {
+          ctx.lineTo(n.x + ox, n.y + oy);
+        }
+        ctx.stroke();
+
+        // Core stripe pass
+        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${a * 0.95})`;
+        ctx.lineWidth = stripeWidth;
+        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${a * 0.94})`;
+        ctx.shadowBlur = (8 + 6 * a) * fade;
+        ctx.beginPath();
+        ctx.moveTo(prev.x + ox, prev.y + oy);
+        if (useCurve) {
+          ctx.quadraticCurveTo(n.x + ox, n.y + oy, mx0 + ox, my0 + oy);
+        } else {
+          ctx.lineTo(n.x + ox, n.y + oy);
+        }
         ctx.stroke();
       }
     }

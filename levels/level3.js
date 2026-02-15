@@ -8,23 +8,26 @@
 defineLevel("lvl3", level => {
   const map = parseAsciiMap(`
     ///////////////////////////////
-    /                           /
-    /                           /
-    /     AA        AA          /
-    /     AA        AA          /
-    /                           /
-    /          AA               /
-    /          AA       AA      /
-    /                   AA      /
-    /   AA                      /
-    /   AA       AA             /
-    /            AA          AA /
-    /                        AA /
-    /      AA                   /
-    /      AA       AA          /
-    /               AA          /
-    /                           /
-    /                           /
+    /                             /
+    /          AAAAAAAAAA         /
+    /                    AA       /
+    /                      A      /
+    /                       A     /
+    /       AAAAAAAAAA      A     /
+    /      A          A     A     /
+    /      A          A     A     /
+    /      A     AAA  A     A     /
+    /      A    A   A A     A     /
+    /      A    A   A A     A     /
+    /      A    A     A     A     /
+    /      A     AAAAA      A     /
+    /      A               A      /
+    /      A               A      /
+    /      A             AA       /
+    /       AAAAAAAAAAAAA         /
+    /                             /
+    /                             /
+    /                             /
     ///////////////////////////////
   `);
 

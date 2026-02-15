@@ -21,14 +21,14 @@ const LEVEL_PLACEMENTS = {
     catSpawn:  { x: BOARD.x + 22 * 40, y: BOARD.y + 11 * 40 },
     catVel:    { vx: 20, vy: -15 },
     goalRod:   { x: BOARD.x + BOARD.w * 0.08, y: BOARD.y + BOARD.h * 0.08, h: 60 },
-    toolCounts: { heat: 2, cold: 3, mass: 1, highPressure: 1, vacuum: 1, tunneling: 0 },
+    toolCounts: { heat: 2, cold: 3, mass: 1, highPressure: 1, vacuum: 1, tunneling: 5 },
   },
   3: {
     // Spiral maze — cat starts in center, rod just outside spiral opening
     catSpawn:  { x: BOARD.x + 15 * 40, y: BOARD.y + 11 * 40 },
     catVel:    { vx: 20, vy: -15 },
     goalRod:   { x: BOARD.x + 27 * 40, y: BOARD.y + 2 * 40, h: 60 },
-    toolCounts: { heat: 1, cold: 1, mass: 3, highPressure: 2, vacuum: 1, tunneling: 0 },
+    toolCounts: { heat: 1, cold: 1, mass: 3, highPressure: 2, vacuum: 1, tunneling: 4 },
   },
   4: {
     // Dead-end pockets — pressure pushes to escape
