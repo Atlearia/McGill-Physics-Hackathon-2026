@@ -55,7 +55,4 @@ function legendWith(overrides = {}) {
 }
 
 // Individual levels are loaded from levels/*.js
-// Final setLevel call after all level scripts are loaded:
-// (moved to index.html script order — levels/level*.js then setLevel)
-
-setLevel(currentLevelId);
+// setLevel is called from game.js after all level scripts are loaded.

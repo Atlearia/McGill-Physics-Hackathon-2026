@@ -343,14 +343,59 @@ function drawSidebar(ctx) {
 
   // Panel background
   roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
-  ctx.fillStyle = isHacker ? "rgba(6,10,14,0.94)" : "rgba(18,8,28,0.88)";
+  if (isHacker) {
+    ctx.fillStyle = "rgba(6,10,14,0.94)";
+  } else {
+    const panelGrad = ctx.createLinearGradient(
+      SIDEBAR.x,
+      SIDEBAR.y,
+      SIDEBAR.x,
+      SIDEBAR.y + SIDEBAR.h
+    );
+    panelGrad.addColorStop(0, "#1B0B62");
+    panelGrad.addColorStop(0.55, "#4A2D99");
+    panelGrad.addColorStop(1, "#8A4FA9");
+    ctx.fillStyle = panelGrad;
+  }
   ctx.fill();
 
   // Panel border
-  roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
-  ctx.strokeStyle = isHacker ? "rgba(0,230,160,0.2)" : "rgba(160,80,220,0.25)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  if (isHacker) {
+    roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+    ctx.strokeStyle = "rgba(0,230,160,0.2)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  } else {
+    const borderGrad = ctx.createLinearGradient(
+      SIDEBAR.x,
+      SIDEBAR.y,
+      SIDEBAR.x + SIDEBAR.w,
+      SIDEBAR.y + SIDEBAR.h
+    );
+    borderGrad.addColorStop(0, "#A8FFD8");
+    borderGrad.addColorStop(0.5, "#D8B9FF");
+    borderGrad.addColorStop(1, "#FFAEDC");
+    // Soft outer fade: wider strokes get progressively more transparent.
+    ctx.save();
+    for (const pass of [
+      { width: 7, alpha: 0.3 },
+      { width: 10, alpha: 0.18 },
+      { width: 14, alpha: 0.1 }
+    ]) {
+      roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+      ctx.globalAlpha = pass.alpha;
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = pass.width;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Crisp core border.
+    roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
 
   // Right edge glow toward board
   if (isHacker) {
@@ -377,14 +422,14 @@ function drawSidebar(ctx) {
     if (isActive) {
       ctx.save();
       const gc = isHacker ? "0,255,200" : "200,120,255";
-      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 5);
+      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 15);
       ctx.fillStyle = "rgba(" + gc + ",0.14)";
       ctx.shadowColor = "rgba(" + gc + ",0.5)";
       ctx.shadowBlur = 22;
       ctx.fill();
       ctx.restore();
     } else if (isHovered) {
-      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 5);
+      roundRect(ctx, rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6, 15);
       ctx.fillStyle = isHacker ? "rgba(0,255,180,0.06)" : "rgba(180,100,255,0.06)";
       ctx.fill();
     }
@@ -402,6 +447,17 @@ function drawSidebar(ctx) {
 
     // Icon
     if (isHacker) {
+      // Green border background behind each glyph
+      const bgPad = 7;
+      const bgX = rect.x + bgPad;
+      const bgY = rect.y + bgPad;
+      const bgW = rect.w - bgPad * 2;
+      const bgH = rect.h - bgPad * 2;
+      roundRect(ctx, bgX, bgY, bgW, bgH, 15);
+      ctx.strokeStyle = "rgba(0,230,160,0.45)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
       const color = isActive ? "#00ffc8" : (isHovered ? "rgba(0,230,180,0.7)" : "rgba(0,230,180,0.45)");
       drawGlyph(ctx, t.id, rect, color);
     } else {
@@ -939,6 +995,7 @@ function updateHTMLPanels() {
         ["|v|", spd.toFixed(2) + " px/s"],
         ["\u03B8", ang.toFixed(1) + "\u00B0"],
         ["mass", b.mass.toFixed(2) + " kg"],
+        ["species", "cat"],
         ["radius", b.radius.toFixed(1) + " px"],
         ["K\u2091", ke.toFixed(0) + " J"],
         ["U\u1D67", peY.toFixed(0) + " J"],

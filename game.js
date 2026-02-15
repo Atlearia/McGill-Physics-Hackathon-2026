@@ -16,7 +16,7 @@ const state = {
   disabledWalls: new Map(),
   tunnelPreview: null,
   toolUses: {},
-  hackerMode: true,
+  hackerMode: false,
   hoverTool: -1,
   hoverToolPrev: -1,
   hoverStart: 0,
@@ -33,8 +33,56 @@ for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : In
 function initGoalRod() {
   const p = getLevelPlacement(state.level);
   state.goalRod = { ...p.goalRod };
+
+  // Ensure rod does not overlap with walls.
+  // The sprite is drawn at 3× height and tilted 30°, so we check multiple
+  // sample points along the rod's visual extent.
+  const rodH = state.goalRod.h;
+  const spriteH = rodH * 3;                       // visual height
+  const tiltRad = 30 * Math.PI / 180;
+  const halfLen = spriteH * 0.5;
+  // Direction vector along the tilted rod
+  const dirX = Math.sin(tiltRad);   //  sin(30°) ≈ 0.5
+  const dirY = -Math.cos(tiltRad);  // -cos(30°) ≈ -0.87 (points up)
+  const checkRadius = 20;  // clearance around each sample point
+
+  function rodOverlapsWalls(rx, ry) {
+    // Sample 5 points along the rod length (center + top/bottom + 2 intermediates)
+    for (let t = -1; t <= 1; t += 0.5) {
+      const px = rx + dirX * halfLen * t;
+      const py = ry + dirY * halfLen * t;
+      for (const w of walls) {
+        if (state.disabledWalls && state.disabledWalls.has(w)) continue;
+        const cp = closestPt(px, py, w.a.x, w.a.y, w.b.x, w.b.y);
+        const dist = Math.hypot(px - cp.x, py - cp.y);
+        if (dist < checkRadius + wallHalfWidth(w)) return true;
+      }
+    }
+    return false;
+  }
+
+  let maxTries = 60;
+  while (maxTries-- > 0) {
+    if (!rodOverlapsWalls(state.goalRod.x, state.goalRod.y + rodH * 0.5)) break;
+    // Nudge rod in a spiral pattern
+    const angle = (60 - maxTries) * Math.PI / 8;
+    const r = 15 + 5 * (60 - maxTries);
+    state.goalRod.x = p.goalRod.x + Math.cos(angle) * r;
+    state.goalRod.y = p.goalRod.y + Math.sin(angle) * r;
+  }
 }
+// Initialize level 1 walls + goal rod at startup
+setLevel(currentLevelId);
 initGoalRod();
+
+// Set cat spawn from registry
+(function initCatSpawn() {
+  const p = getLevelPlacement(state.level);
+  balloon.x = p.catSpawn.x;
+  balloon.y = p.catSpawn.y;
+  balloon.vx = p.catVel.vx;
+  balloon.vy = p.catVel.vy;
+})();
 
 // ─── AUDIO ───────────────────────────────────────────────────
 // Per-file volume normalization (tweak these if a specific sound is too loud/quiet)

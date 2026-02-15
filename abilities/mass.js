@@ -26,7 +26,7 @@ defineAbility({
         if (this.timeRemaining <= 0) { this.dead = true; return; }
         const dx = this.x - b.x, dy = this.y - b.y;
         const dist = Math.hypot(dx, dy) || 1;
-        const str = 600000 / (dist * dist + 12000);
+        const str = 18000000 / (dist * dist + 12000);
         const resp = 1 / Math.max(0.25, b.mass);
         b.vx += (dx / dist) * str * dt * resp;
         b.vy += (dy / dist) * str * dt * resp;
