@@ -317,7 +317,7 @@ function drawVecIcon(ctx, cx, cy, letter, inward) {
 }
 function drawPsiIcon(ctx, cx, cy) {
   ctx.font = "30px Times New Roman"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("Y", cx - 9, cy - 3);
+  ctx.fillText("Ψ", cx - 9, cy - 3);
   ctx.beginPath(); ctx.moveTo(cx + 1, cy + 8); ctx.lineTo(cx + 24, cy + 8); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx + 12, cy - 10); ctx.lineTo(cx + 12, cy + 8); ctx.stroke();
 }
@@ -329,7 +329,7 @@ function drawGlyph(ctx, id, rect, color) {
     case "cold": drawThermIcon(ctx, cx, cy, false); break;
     case "mass": drawVecIcon(ctx, cx, cy, "M", true); break;
     case "highPressure": drawVecIcon(ctx, cx, cy, "P", false); break;
-    case "vacuum": drawVecIcon(ctx, cx, cy, "P", true); break;
+    case "vacuum": drawVecIcon(ctx, cx, cy, "V", true); break;
     case "tunneling": drawPsiIcon(ctx, cx, cy); break;
   }
   ctx.restore();
@@ -361,9 +361,24 @@ function drawSidebar(ctx) {
 
   // Panel border
   if (isHacker) {
+    // Outer glow passes
+    ctx.save();
+    for (const pass of [
+      { width: 12, alpha: 0.06 },
+      { width: 8,  alpha: 0.12 },
+      { width: 5,  alpha: 0.18 },
+    ]) {
+      roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
+      ctx.globalAlpha = pass.alpha;
+      ctx.strokeStyle = "rgba(0,230,160,1)";
+      ctx.lineWidth = pass.width;
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Core border
     roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
-    ctx.strokeStyle = "rgba(0,230,160,0.2)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(0,230,160,0.5)";
+    ctx.lineWidth = 3;
     ctx.stroke();
   } else {
     const borderGrad = ctx.createLinearGradient(
@@ -505,6 +520,27 @@ function drawSidebar(ctx) {
       }
       ctx.restore();
     }
+
+    // Use-count badge (bottom-right of cell)
+    const uses = state.toolUses[t.id];
+    if (uses != null) {
+      const badgeText = "" + uses;
+      const bx = rect.x + rect.w - 14;
+      const by = rect.y + rect.h - 10;
+      ctx.save();
+      ctx.font = "bold 12px 'Quicksand', monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (uses <= 0) {
+        ctx.fillStyle = isHacker ? "rgba(255,60,60,0.7)" : "rgba(255,80,80,0.7)";
+      } else {
+        ctx.fillStyle = isHacker ? "rgba(0,230,160,0.85)" : "rgba(230,180,255,0.9)";
+      }
+      ctx.shadowColor = isHacker ? "rgba(0,230,160,0.5)" : "rgba(200,140,255,0.5)";
+      ctx.shadowBlur = 4;
+      ctx.fillText(badgeText, bx, by);
+      ctx.restore();
+    }
   }
 
   ctx.restore();
@@ -614,26 +650,90 @@ function drawToolTooltip(ctx) {
 }
 
 // ─── LIVE EQUATIONS (above active effects on canvas) ─────────
-function getEffectLiveEquation(eff, b) {
+// Draw a fraction (numerator over denominator) on canvas, returns width used
+function drawFraction(ctx, num, den, x, y, fontSize) {
+  const smallSize = Math.round(fontSize * 0.72);
+  ctx.save();
+  ctx.font = "bold " + smallSize + "px 'Courier New', monospace";
+  const numW = ctx.measureText(num).width;
+  const denW = ctx.measureText(den).width;
+  const fracW = Math.max(numW, denW) + 4;
+  // Numerator
+  ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.fillText(num, x + fracW * 0.5, y - 2);
+  // Divider line
+  ctx.strokeStyle = ctx.fillStyle;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x + fracW, y);
+  ctx.stroke();
+  // Denominator
+  ctx.textBaseline = "top";
+  ctx.fillText(den, x + fracW * 0.5, y + 2);
+  ctx.restore();
+  return fracW;
+}
+
+// Structured live equation: array of segments [{text}, {frac: [num, den]}, ...]
+// Each effect gets its own individual equation with per-effect data
+function getEffectLiveSegments(eff, b) {
+  const dist = Math.hypot(eff.x - b.x, eff.y - b.y);
   const spd = Math.hypot(b.vx, b.vy);
   switch (eff.id) {
-    case "heat":
-      return "dT/dt = " + b.temp.toFixed(2) + " + Q  |  r\u2192" + b.targetRadius.toFixed(1);
-    case "cold":
-      return "dT/dt = " + b.temp.toFixed(2) + " \u2212 Q  |  r\u2192" + b.targetRadius.toFixed(1);
-    case "mass": {
-      const dist = Math.hypot(eff.x - b.x, eff.y - b.y);
-      return "F = \u2212GMm/r\u00b2  r=" + dist.toFixed(0) + "  t=" + (eff.timeRemaining || 0).toFixed(1) + "s";
+    case "heat": {
+      const budgetPct = ((eff.budget / 2) * 100).toFixed(0);
+      const isOverlapping = dist <= b.radius + 20;
+      return [{ frac: ["dT", "dt"] }, { text: " = +Q   t=" + eff.budget.toFixed(1) + "s  d=" + dist.toFixed(0) + (isOverlapping ? " \u2713" : "") }];
     }
+    case "cold": {
+      const isOverlapping = dist <= b.radius + 20;
+      return [{ frac: ["dT", "dt"] }, { text: " = \u2212Q   t=" + eff.budget.toFixed(1) + "s  d=" + dist.toFixed(0) + (isOverlapping ? " \u2713" : "") }];
+    }
+    case "mass":
+      return [{ text: "F = \u2212" }, { frac: ["GMm", "r\u00b2"] }, { text: "  r=" + dist.toFixed(0) + "  t=" + (eff.timeRemaining || 0).toFixed(1) + "s" }];
     case "highPressure":
-      return "\u2202p/\u2202t = c\u00b2\u2207\u00b7u  |v|=" + spd.toFixed(1);
+      return [{ frac: ["\u2202p", "\u2202t"] }, { text: " = c\u00b2\u2207\u00b7u  d=" + dist.toFixed(0) + "  t=" + (eff.budget || 0).toFixed(1) + "s" }];
     case "vacuum":
-      return "u\u1d63 = \u2212k/r\u00b2  |v|=" + spd.toFixed(1);
-    case "tunneling": {
-      return "P ~ exp(\u22122\u03baL)  \u03c8=" + b.tunnelGhost.toFixed(2);
-    }
+      return [{ text: "u\u1d63 = \u2212" }, { frac: ["k", "r\u00b2"] }, { text: "  d=" + dist.toFixed(0) + "  t=" + (eff.budget || 0).toFixed(1) + "s" }];
+    case "tunneling":
+      return [{ text: "P \u223c e" }, { text: "\u207b\u00b2\u1d4bL" }, { text: "  \u03c8=" + b.tunnelGhost.toFixed(2) }];
     default:
       return null;
+  }
+}
+
+function drawLiveEquation(ctx, segments, cx, cy, fontSize) {
+  // Measure total width
+  ctx.font = "bold " + fontSize + "px 'Courier New', monospace";
+  let totalW = 0;
+  const parts = [];
+  for (const seg of segments) {
+    if (seg.frac) {
+      const smallSize = Math.round(fontSize * 0.72);
+      ctx.font = "bold " + smallSize + "px 'Courier New', monospace";
+      const numW = ctx.measureText(seg.frac[0]).width;
+      const denW = ctx.measureText(seg.frac[1]).width;
+      const w = Math.max(numW, denW) + 4;
+      parts.push({ type: "frac", w, seg });
+      totalW += w;
+      ctx.font = "bold " + fontSize + "px 'Courier New', monospace";
+    } else {
+      const w = ctx.measureText(seg.text).width;
+      parts.push({ type: "text", w, seg });
+      totalW += w;
+    }
+  }
+  // Draw centered
+  let x = cx - totalW * 0.5;
+  for (const p of parts) {
+    if (p.type === "frac") {
+      drawFraction(ctx, p.seg.frac[0], p.seg.frac[1], x, cy, fontSize);
+    } else {
+      ctx.font = "bold " + fontSize + "px 'Courier New', monospace";
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(p.seg.text, x, cy);
+    }
+    x += p.w;
   }
 }
 
@@ -745,27 +845,12 @@ function draw() {
     // Live equations above active effects (hacker mode only)
     if (state.hackerMode) {
       ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
       for (const eff of state.activeEffects) {
         if (eff.dead) continue;
-        const liveEq = getEffectLiveEquation(eff, b);
-        if (!liveEq) continue;
-        const eqX = eff.x;
-        const eqY = eff.y - 50;
-        // Background pill
-        ctx.font = "bold 11px 'Courier New', monospace";
-        const tw = ctx.measureText(liveEq).width;
-        const px = 8, py = 4;
-        roundRect(ctx, eqX - tw * 0.5 - px, eqY - 8 - py, tw + px * 2, 16 + py * 2, 6);
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fill();
-        ctx.strokeStyle = "rgba(0,230,160,0.35)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // Text
-        ctx.fillStyle = "rgba(0,255,200,0.85)";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(liveEq, eqX, eqY);
+        const segments = getEffectLiveSegments(eff, b);
+        if (!segments) continue;
+        drawLiveEquation(ctx, segments, eff.x, eff.y - 55, 15);
       }
       ctx.restore();
     }
@@ -896,21 +981,61 @@ function draw() {
   // Trail
   if (trail.length > 1) {
     ctx.save();
-    const trailColor = TRAIL_COLORS[state.level - 1];
+    const palette = state.showAllTrails
+      ? ROD_COLORS
+      : (state.collectedTrailColors && state.collectedTrailColors.length
+      ? state.collectedTrailColors
+      : ["#ffffff"]);
+    const parsedPalette = palette.map(hex => {
+      const value = parseInt(String(hex).replace("#", ""), 16);
+      return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255
+      };
+    });
+    const stripeCount = parsedPalette.length;
+    const stripeWidth = Math.max(2.2, (b.radius * 2) / 7);
+    const stripeSpacing = stripeWidth;
+    ctx.globalCompositeOperation = "screen";
     for (let i = 1; i < trail.length; i++) {
-      const prev = trail[i - 1], n = trail[i], a = clamp(n.life, 0, 1) * 0.86;
-      let r, g, bl;
-      if (trailColor) {
-        // Parse hex trail color
-        const tc = parseInt(trailColor.slice(1), 16);
-        r = (tc >> 16) & 255; g = (tc >> 8) & 255; bl = tc & 255;
-      } else {
-        r = Math.round(255 - cool * 28); g = Math.round(255 - warm * 24 + cool * 8);
-        bl = Math.round(255 - warm * 54 + cool * 38);
+      const prev = trail[i - 1], n = trail[i];
+      const life = clamp(n.life, 0, 1);
+      const a = 0.25 + life * 0.75;
+      const segDx = n.x - prev.x, segDy = n.y - prev.y;
+      const segLen = Math.hypot(segDx, segDy) || 1;
+      const px = -segDy / segLen, py = segDx / segLen;
+      const center = (stripeCount - 1) * 0.5;
+      for (let s = 0; s < stripeCount; s++) {
+        const c = parsedPalette[s];
+        const vivid = {
+          r: Math.min(255, Math.round(c.r * 1.15 + 18)),
+          g: Math.min(255, Math.round(c.g * 1.15 + 18)),
+          b: Math.min(255, Math.round(c.b * 1.15 + 18))
+        };
+        const offset = (s - center) * stripeSpacing;
+        const ox = px * offset, oy = py * offset;
+
+        // Outer glow pass
+        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.18 + a * 0.22})`;
+        ctx.lineWidth = stripeWidth * 1.45;
+        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.58 + a * 0.3})`;
+        ctx.shadowBlur = 14 + 10 * a;
+        ctx.beginPath();
+        ctx.moveTo(prev.x + ox, prev.y + oy);
+        ctx.lineTo(n.x + ox, n.y + oy);
+        ctx.stroke();
+
+        // Core stripe pass
+        ctx.strokeStyle = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.5 + a * 0.45})`;
+        ctx.lineWidth = stripeWidth;
+        ctx.shadowColor = `rgba(${vivid.r},${vivid.g},${vivid.b},${0.72 + a * 0.22})`;
+        ctx.shadowBlur = 8 + 6 * a;
+        ctx.beginPath();
+        ctx.moveTo(prev.x + ox, prev.y + oy);
+        ctx.lineTo(n.x + ox, n.y + oy);
+        ctx.stroke();
       }
-      ctx.strokeStyle = `rgba(${r},${g},${bl},${a})`; ctx.lineWidth = 1.2 + a * 4.8;
-      ctx.shadowColor = `rgba(${r},${g},${bl},0.58)`; ctx.shadowBlur = 16 * a;
-      ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(n.x, n.y); ctx.stroke();
     }
     ctx.restore();
   }
@@ -962,7 +1087,7 @@ function draw() {
   }
   ctx.restore();
 
-  // Crosshair
+  // Crosshair + cursor icon
   if (state.dragging && tool) {
     ctx.save(); ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.93)";
     ctx.shadowColor = tool.accent; ctx.shadowBlur = 9; ctx.lineCap = "round";
@@ -972,6 +1097,21 @@ function draw() {
     ctx.moveTo(pointer.x, pointer.y - 16); ctx.lineTo(pointer.x, pointer.y - 5);
     ctx.moveTo(pointer.x, pointer.y + 5); ctx.lineTo(pointer.x, pointer.y + 16);
     ctx.stroke(); ctx.restore();
+
+    // Small tool icon at cursor for heat, cold, mass
+    const cursorIconIds = ["heat", "cold", "mass"];
+    if (cursorIconIds.includes(tool.id)) {
+      const cImg = toolIconSprites[tool.id];
+      if (cImg && cImg.complete && cImg.naturalWidth) {
+        const cSize = 30;
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.shadowColor = tool.accent;
+        ctx.shadowBlur = 6;
+        ctx.drawImage(cImg, pointer.x + 10, pointer.y - cSize - 6, cSize, cSize);
+        ctx.restore();
+      }
+    }
   }
 
   // Canvas sidebar
@@ -1022,7 +1162,17 @@ function updateHTMLPanels() {
     if (state.hackerMode) {
       if (symEl) symEl.textContent = TOOL_HACKER_SYMBOLS[t.id] || "?";
       if (nameEl) nameEl.textContent = t.name;
-      if (eqLine) eqLine.textContent = isActive ? getLiveEquation(t, b) : t.equation;
+      // Keep KaTeX-rendered equation in left panel (don't overwrite with plain text)
+      // The equation was already rendered by KaTeX at build time
+      if (eqLine && !eqLine.querySelector('.katex')) {
+        // Fallback: re-render if katex content lost
+        const latex = (typeof TOOL_LATEX_EQUATIONS !== 'undefined' && TOOL_LATEX_EQUATIONS[t.id]) || t.equation;
+        if (typeof katex !== 'undefined') {
+          katex.render(latex, eqLine, { throwOnError: false, displayMode: false });
+        } else {
+          eqLine.textContent = t.equation;
+        }
+      }
     } else {
       if (symEl) symEl.textContent = t.name.charAt(0).toUpperCase();
       if (nameEl) nameEl.textContent = t.name;

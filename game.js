@@ -24,6 +24,8 @@ const state = {
   level: 1,
   maxLevel: 7,
   goalRod: null,         // { x, y, h } — set per level
+  collectedTrailColors: [], // rod colors collected so far (stacked trail stripes)
+  showAllTrails: false,  // debug override: render all 7 trail colors
   winFlash: 0,           // flash timer on win
   transitioning: false   // prevent input during transition
 };
@@ -188,7 +190,7 @@ const TOOL_DESCRIPTIONS = {
     const uses = state.toolUses[t.id];
     btn.innerHTML = '<span class="tool-icon" style="color:' + t.accent + '">' + (TOOL_SYMBOLS[t.id] || "?") + '</span>'
       + '<span class="tool-label">' + t.name + '</span>'
-      + '<span class="tool-uses">' + (uses === Infinity ? "\u221e" : "\u00d7" + uses) + '</span>';
+      + '<span class="tool-uses">\u00d7' + uses + '</span>';
     btn.addEventListener("pointerdown", e => {
       e.preventDefault();
       audio.startBGM();
@@ -199,7 +201,20 @@ const TOOL_DESCRIPTIONS = {
     });
     list.appendChild(btn);
   });
+  refreshToolUsesUI();
 })();
+
+// Refresh all sidebar tool-use counters (called on level change / reset)
+function refreshToolUsesUI() {
+  const btns = document.querySelectorAll(".tool-btn");
+  TOOLS.forEach((t, i) => {
+    if (!btns[i]) return;
+    const usesEl = btns[i].querySelector(".tool-uses");
+    if (usesEl) usesEl.textContent = "\u00d7" + state.toolUses[t.id];
+    // Grey out tools with 0 uses
+    btns[i].classList.toggle("tool-empty", state.toolUses[t.id] <= 0);
+  });
+}
 
 const TOOL_ICON_PATHS = {
   heat: "Assets/VisualExamples/heat.png",
@@ -340,15 +355,13 @@ document.addEventListener("pointerup", e => {
       if (eff) {
         state.activeEffects.push(eff);
         audio.play(tool.sound);
-        if (state.toolUses[tool.id] !== Infinity) {
-          state.toolUses[tool.id]--;
-          // Update HTML uses display
-          const btns = document.querySelectorAll(".tool-btn");
-          if (btns[state.activeTool]) {
-            const usesEl = btns[state.activeTool].querySelector(".tool-uses");
-            const uses = state.toolUses[tool.id];
-            if (usesEl) usesEl.textContent = uses === Infinity ? "\u221e" : "\u00d7" + uses;
-          }
+        state.toolUses[tool.id]--;
+        // Update HTML uses display
+        const btns = document.querySelectorAll(".tool-btn");
+        if (btns[state.activeTool]) {
+          const usesEl = btns[state.activeTool].querySelector(".tool-uses");
+          if (usesEl) usesEl.textContent = "\u00d7" + state.toolUses[tool.id];
+          btns[state.activeTool].classList.toggle("tool-empty", state.toolUses[tool.id] <= 0);
         }
       }
     }
@@ -489,6 +502,10 @@ function checkWin() {
 function triggerWin() {
   state.transitioning = true;
   state.winFlash = 1;
+  const rodColor = ROD_COLORS[(state.level - 1) % ROD_COLORS.length];
+  if (rodColor && !state.collectedTrailColors.includes(rodColor)) {
+    state.collectedTrailColors.push(rodColor);
+  }
 
   setTimeout(() => {
     if (state.level < state.maxLevel) {
@@ -552,7 +569,12 @@ function goToLevel(n) {
   state.dragging = false;
   state.activeTool = -1;
   // Reset tool uses
-  for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
+  // Load per-level tool counts
+  const pc = getLevelPlacement(n);
+  for (const t of TOOLS) {
+    state.toolUses[t.id] = (pc.toolCounts && pc.toolCounts[t.id] != null) ? pc.toolCounts[t.id] : 0;
+  }
+  refreshToolUsesUI();
   // Re-init goal rod for new level
   initGoalRod();
   state.transitioning = false;
@@ -561,15 +583,29 @@ function goToLevel(n) {
   if (inp) inp.value = n;
 }
 
+// Reset level button
+(function initResetBtn() {
+  const btn = document.getElementById("reset-level-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => goToLevel(state.level));
+})();
+
 // Level jump UI
 (function initLevelJump() {
   const btn = document.getElementById("level-go-btn");
   const inp = document.getElementById("level-input");
+  const allCb = document.getElementById("all-trails-cb");
   if (!btn || !inp) return;
   btn.addEventListener("click", () => goToLevel(parseInt(inp.value) || 1));
   inp.addEventListener("keydown", e => {
     if (e.key === "Enter") goToLevel(parseInt(inp.value) || 1);
   });
+  if (allCb) {
+    allCb.checked = state.showAllTrails;
+    allCb.addEventListener("change", () => {
+      state.showAllTrails = !!allCb.checked;
+    });
+  }
 })();
 
 // ─── GAME LOOP ───────────────────────────────────────────────

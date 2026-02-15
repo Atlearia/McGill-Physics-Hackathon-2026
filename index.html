@@ -36,7 +36,7 @@
   <!-- ─── TOP BAR ─────────────────────────────────────── -->
   <div id="topbar">
     <span id="topbar-title">The Neon Cat</span>
-    <span id="topbar-equation"></span>
+    <div id="level-box"><span id="topbar-equation"></span></div>
     <label id="hacker-toggle">
       <input type="checkbox" id="hacker-cb" checked>
       <span class="cb-box"></span>
@@ -50,6 +50,7 @@
     <div id="left-panel">
       <div class="panel-header" id="left-panel-header">// ABILITIES</div>
       <div id="tool-info-list"></div>
+      <button id="reset-level-btn">⟳ Reset Level</button>
     </div>
 
     <!-- CENTER: Game Canvas -->
@@ -71,9 +72,15 @@
 
   <!-- Level jump input -->
   <div id="level-jump">
-    <label for="level-input">Go to level:</label>
-    <input id="level-input" type="number" min="1" max="7" value="1" />
-    <button id="level-go-btn">Go</button>
+    <label id="all-trails-toggle" for="all-trails-cb">
+      <input id="all-trails-cb" type="checkbox" />
+      <span>all</span>
+    </label>
+    <div id="level-jump-row">
+      <label for="level-input">Go to level:</label>
+      <input id="level-input" type="number" min="1" max="7" value="1" />
+      <button id="level-go-btn">Go</button>
+    </div>
   </div>
 
   <script src="config.js"></script>

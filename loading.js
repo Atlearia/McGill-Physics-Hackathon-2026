@@ -37,10 +37,12 @@ const ELEMENTS = [
 
   let step = 0;
   let visualProgress = 0;
-  const DELAY_SCALE = 0.5;
-  const STEP_DELAY = 420 * DELAY_SCALE;     // base ms per element step
-  const FINAL_HOLD = 900 * DELAY_SCALE;    // ms to hold on Neon before transition
   const FADE_DURATION = 800;  // ms for fade-out
+
+  // ── Non-linear loading curve with randomized "stuck" moment ──
+  // Total budget: ~2.5s max. 10 steps.
+  // Pick a random step (3–7) to "stall" at for ~800–1000ms, then burst fast.
+  const stallStep = 3 + Math.floor(Math.random() * 5); // random step 3-7 to stall on
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
@@ -48,23 +50,37 @@ const ELEMENTS = [
 
   function nextProgressPercent(i) {
     const total = ELEMENTS.length;
-    const base = ((i + 1) / total) * 100;
     if (i === total - 1) return 100;
 
-    const phase = i / Math.max(1, total - 1); // 0..1 across loading
-    const jitter = (Math.random() * 2 - 1) * (3.6 - phase * 1.6);
-    const minBound = visualProgress + 2.5;
-    const maxBound = Math.min(98, ((i + 1.35) / total) * 100);
+    // Non-linear base curve — starts slow, accelerates
+    const t = (i + 1) / total;
+    // Ease-in-out with bias toward back-loading
+    const curved = t < 0.5
+      ? 2 * t * t
+      : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const base = curved * 100;
+
+    // Add per-run jitter (±4%)
+    const jitter = (Math.random() * 2 - 1) * 4;
+    const minBound = visualProgress + 1;
+    const maxBound = Math.min(97, base + 8);
     return clamp(base + jitter, minBound, maxBound);
   }
 
   function nextStepDelay(i) {
-    const total = ELEMENTS.length;
-    const phase = i / Math.max(1, total - 1); // 0..1 across loading
-    const centerBoost = 1 - Math.pow(2 * phase - 1, 2); // faster near middle
-    const curve = 0.82 + centerBoost * 0.55;
-    const jitter = 0.82 + Math.random() * 0.42;
-    return Math.round(STEP_DELAY * curve * jitter);
+    // Stall step: pause for ~800-1000ms (the "stuck" moment)
+    if (i === stallStep) {
+      return 800 + Math.floor(Math.random() * 200);
+    }
+    // Steps after stall: very fast burst (40-80ms each)
+    if (i > stallStep) {
+      return 40 + Math.floor(Math.random() * 40);
+    }
+    // Steps before stall: moderate speed with randomness (120-220ms)
+    // Starts a bit slower, speeds up toward stall
+    const phase = i / Math.max(1, stallStep);
+    const baseDelay = 200 - phase * 80;
+    return Math.round(baseDelay + Math.random() * 60);
   }
 
   function showStep(i) {
@@ -76,7 +92,7 @@ const ELEMENTS = [
     curEl.textContent = el.z;
     const progress = nextProgressPercent(i);
     visualProgress = progress;
-    const transitionMs = Math.round((250 + Math.random() * 240) * DELAY_SCALE);
+    const transitionMs = Math.round(150 + Math.random() * 150);
     const easing = i === ELEMENTS.length - 1
       ? "cubic-bezier(0.22, 1, 0.36, 1)"
       : "cubic-bezier(0.2, 0.95, 0.3, 1)";
@@ -113,7 +129,7 @@ const ELEMENTS = [
       const currentStep = step;
       showStep(currentStep);
       step++;
-      const delay = step === ELEMENTS.length ? FINAL_HOLD : nextStepDelay(currentStep);
+      const delay = step === ELEMENTS.length ? (300 + Math.floor(Math.random() * 150)) : nextStepDelay(currentStep);
       setTimeout(advance, delay);
     } else {
       dismiss();
@@ -140,5 +156,5 @@ const ELEMENTS = [
   screen.addEventListener("click", () => {});
 
   // Start after a brief initial pause
-  setTimeout(advance, Math.round((250 + Math.random() * 220) * DELAY_SCALE));
+  setTimeout(advance, 150 + Math.floor(Math.random() * 150));
 })();

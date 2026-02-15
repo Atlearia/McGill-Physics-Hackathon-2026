@@ -18,10 +18,55 @@ body { display: flex; flex-direction: column; background: #0a0c0e }
 }
 #topbar-title { font-weight: bold; font-size: 17px; color: #00ffb4; letter-spacing: 0.5px;
   transition: color 0.5s }
-#topbar-equation { flex: 1; text-align: center; color: #00ffb4; font-size: 14px; opacity: 0;
+#topbar-equation { text-align: center; color: #00ffb4; font-size: 14px; opacity: 0;
   font-weight: 600; letter-spacing: 1px;
-  transition: opacity 0.3s, color 0.5s }
+  transition: opacity 0.3s, color 0.5s;
+  position: relative; z-index: 2; }
 #topbar-equation.visible { opacity: 1 }
+
+/* Level box with rotating rainbow neon border */
+#level-box {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 18px;
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 1;
+  background: #16191d;
+  box-shadow: 0 0 8px rgba(170,50,255,0.3), 0 0 16px rgba(80,180,255,0.15);
+}
+#level-box::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: 10px;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    #ff3333, #ff8800, #ffdd00, #33dd55, #3399ff, #5533cc, #aa33ff, #ff3333
+  );
+  animation: rainbow-spin 3s linear infinite;
+  filter: blur(1.5px);
+}
+#level-box::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  border-radius: 6px;
+  background: #16191d;
+}
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes rainbow-spin {
+  to { --border-angle: 360deg; }
+}
 
 /* Hacker toggle */
 #hacker-toggle {
@@ -49,11 +94,11 @@ body { display: flex; flex-direction: column; background: #0a0c0e }
 /* Left panel */
 #left-panel {
   width: 260px; min-width: 260px; background: #0d100e;
-  border-right: 2px solid #1a2e22; display: flex; flex-direction: column;
+  border-right: 2px solid rgba(0,230,160,0.25); display: flex; flex-direction: column;
   padding: 0; overflow-y: auto; transition: background 0.4s, border-color 0.4s;
 }
 #left-panel .panel-header {
-  color: #00ffb4; border-bottom-color: #1a3328; font-size: 14px;
+  color: #00ffb4; border-bottom-color: rgba(0,230,160,0.2); font-size: 14px;
 }
 .panel-header {
   padding: 10px 14px 8px; font-size: 14px; font-weight: bold;
@@ -65,6 +110,55 @@ body { display: flex; flex-direction: column; background: #0a0c0e }
 
 /* Tool info blocks */
 #tool-info-list { flex: 1; padding: 8px 0; overflow-y: auto }
+
+/* Reset level button */
+#reset-level-btn {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 10px 12px 14px;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border: 2px solid rgba(0,230,160,0.4);
+  border-radius: 6px;
+  background: rgba(0,230,160,0.07);
+  color: #00ffb4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-shadow: 0 0 6px rgba(0,230,160,0.4);
+  box-shadow: 0 0 8px rgba(0,230,160,0.15), inset 0 0 8px rgba(0,230,160,0.05);
+}
+#reset-level-btn:hover {
+  background: rgba(0,230,160,0.15);
+  border-color: rgba(0,230,160,0.7);
+  box-shadow: 0 0 14px rgba(0,230,160,0.3), inset 0 0 12px rgba(0,230,160,0.08);
+  text-shadow: 0 0 10px rgba(0,230,160,0.6);
+}
+#reset-level-btn:active {
+  transform: scale(0.96);
+  background: rgba(0,230,160,0.22);
+}
+
+/* Normal mode reset button */
+body.normal-mode #reset-level-btn {
+  border: 2px solid rgba(200,140,255,0.35);
+  background: linear-gradient(135deg, rgba(160,80,220,0.12), rgba(100,40,180,0.08));
+  color: #e0b8ff;
+  text-shadow: 0 0 8px rgba(200,140,255,0.35);
+  box-shadow: 0 0 10px rgba(180,100,240,0.15), inset 0 0 8px rgba(180,100,240,0.05);
+}
+body.normal-mode #reset-level-btn:hover {
+  background: linear-gradient(135deg, rgba(180,100,240,0.22), rgba(120,50,200,0.15));
+  border-color: rgba(220,160,255,0.55);
+  box-shadow: 0 0 16px rgba(200,140,255,0.3), inset 0 0 12px rgba(200,140,255,0.08);
+  text-shadow: 0 0 12px rgba(220,160,255,0.5);
+}
+body.normal-mode #reset-level-btn:active {
+  transform: scale(0.96);
+  background: linear-gradient(135deg, rgba(200,120,255,0.3), rgba(140,60,220,0.2));
+}
 .tool-info-block {
   padding: var(--tool-block-gap) 12px; border-bottom: 1px solid rgba(0,255,180,0.08);
   transition: background 0.15s, border-color 0.2s;
@@ -97,6 +191,12 @@ body.normal-mode .tool-info-icon { display: block }
   padding-left: 48px; line-height: 1.5; transition: color 0.3s;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tool-info-eq .katex {
+  font-size: 13px; color: rgba(0,255,180,0.55);
+}
+.tool-info-block.active .tool-info-eq .katex {
+  color: rgba(0,255,200,0.85);
+}
 .tool-info-block.active .tool-info-eq { color: rgba(0,255,180,0.7) }
 
 /* Normal mode tool info */
@@ -127,6 +227,8 @@ body.normal-mode .tool-info-block.active .tool-info-eq { color: rgba(230,180,255
 }
 .tool-btn .tool-label { flex: 1 }
 .tool-btn .tool-uses { font-size: 11px; color: #4dbb86; transition: color 0.5s }
+.tool-btn.tool-empty { opacity: 0.35; pointer-events: none; filter: grayscale(0.6) }
+.tool-btn.tool-empty .tool-uses { color: #666 }
 
 /* Right panel */
 #right-panel {
@@ -159,13 +261,24 @@ canvas { display: block; image-rendering: auto }
 /* Level jump input */
 #level-jump {
   position: fixed; bottom: 14px; right: 14px;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
   background: rgba(10,12,16,0.85); border: 1px solid rgba(0,255,180,0.2);
   border-radius: 8px; padding: 6px 10px; z-index: 100;
   font-size: 12px; color: #00ffb4;
   backdrop-filter: blur(4px);
 }
+#level-jump-row {
+  display: flex; align-items: center; gap: 6px;
+}
 #level-jump label { opacity: 0.7 }
+#all-trails-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: pointer; user-select: none;
+}
+#all-trails-cb {
+  accent-color: #00ffb4;
+  width: 13px; height: 13px;
+}
 #level-input {
   width: 38px; background: rgba(0,255,180,0.08); border: 1px solid rgba(0,255,180,0.25);
   border-radius: 4px; color: #00ffb4; text-align: center; font-size: 13px;
@@ -190,6 +303,7 @@ body.normal-mode #level-go-btn {
   color: rgba(220,170,255,0.9);
 }
 body.normal-mode #level-go-btn:hover { background: rgba(200,140,255,0.25) }
+body.normal-mode #all-trails-cb { accent-color: #d793ff }
 
 /* ═══════════════════════════════════════════════
    NORMAL MODE – dreamy pink/purple aesthetic
@@ -213,6 +327,12 @@ body.normal-mode #topbar-title {
 }
 body.normal-mode #topbar-equation {
   color: rgba(230,180,255,0.85);
+}
+body.normal-mode #level-box {
+  background: rgba(60,20,80,0.55);
+}
+body.normal-mode #level-box::after {
+  background: rgba(60,20,80,0.55);
 }
 
 body.normal-mode #hacker-toggle { color: rgba(210,170,230,0.7) }
