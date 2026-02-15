@@ -80,8 +80,8 @@ initGoalRod();
   const p = getLevelPlacement(state.level);
   balloon.x = p.catSpawn.x;
   balloon.y = p.catSpawn.y;
-  balloon.vx = p.catVel.vx;
-  balloon.vy = p.catVel.vy;
+  balloon.vx = 0;
+  balloon.vy = 0;
 })();
 
 // ─── AUDIO ───────────────────────────────────────────────────
@@ -211,6 +211,16 @@ const TOOL_ICON_PATHS = {
 };
 
 // ─── BUILD LEFT PANEL TOOL INFO BLOCKS ───────────────────────
+// LaTeX equations for KaTeX rendering (left panel, static)
+const TOOL_LATEX_EQUATIONS = {
+  heat:         '\\frac{dT}{dt} = k\\nabla^2 T + Q',
+  cold:         '\\frac{dT}{dt} = k\\nabla^2 T - Q_c',
+  mass:         'F = -\\frac{GMm}{r^2}',
+  highPressure: '\\frac{\\partial p}{\\partial t} = c^2 \\nabla \\cdot \\mathbf{u} + S_p',
+  vacuum:       'u_r = -\\frac{k}{r^2}',
+  tunneling:    'P_{\\text{tunnel}} \\sim e^{-2\\kappa L}'
+};
+
 (function buildToolInfoList() {
   const list = document.getElementById("tool-info-list");
   if (!list) return;
@@ -225,7 +235,21 @@ const TOOL_ICON_PATHS = {
         '<img class="tool-info-icon" src="' + iconSrc + '" alt="' + t.name + '">' +
         '<span class="tool-info-name">' + t.name + '</span>' +
       '</div>' +
-      '<div class="tool-info-eq">' + t.equation + '</div>';
+      '<div class="tool-info-eq"></div>';
+    // Render equation with KaTeX if available
+    const eqEl = block.querySelector('.tool-info-eq');
+    const latex = TOOL_LATEX_EQUATIONS[t.id] || t.equation;
+    if (typeof katex !== 'undefined') {
+      katex.render(latex, eqEl, { throwOnError: false, displayMode: false });
+    } else {
+      // KaTeX may not be loaded yet (defer) — retry once loaded
+      eqEl.textContent = t.equation;
+      window.addEventListener('load', () => {
+        if (typeof katex !== 'undefined') {
+          katex.render(latex, eqEl, { throwOnError: false, displayMode: false });
+        }
+      });
+    }
     list.appendChild(block);
   });
 })();
@@ -489,8 +513,8 @@ function goToLevel(n) {
   const p = getLevelPlacement(n);
   balloon.x = p.catSpawn.x;
   balloon.y = p.catSpawn.y;
-  balloon.vx = p.catVel.vx;
-  balloon.vy = p.catVel.vy;
+  balloon.vx = 0;
+  balloon.vy = 0;
   balloon.radius = BASE_RAD; balloon.targetRadius = BASE_RAD;
   balloon.temp = 0; balloon.tunnelGhost = 0;
 

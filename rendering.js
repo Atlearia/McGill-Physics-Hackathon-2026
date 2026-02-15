@@ -378,9 +378,10 @@ function drawSidebar(ctx) {
     // Soft outer fade: wider strokes get progressively more transparent.
     ctx.save();
     for (const pass of [
-      { width: 7, alpha: 0.3 },
-      { width: 10, alpha: 0.18 },
-      { width: 14, alpha: 0.1 }
+      { width: 7, alpha: 0.18 },
+      { width: 11, alpha: 0.09 },
+      { width: 16, alpha: 0.045 },
+      { width: 22, alpha: 0.02 }
     ]) {
       roundRect(ctx, SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, SIDEBAR.r);
       ctx.globalAlpha = pass.alpha;
@@ -612,7 +613,31 @@ function drawToolTooltip(ctx) {
   ctx.restore();
 }
 
-// ─── LIVE EQUATIONS ──────────────────────────────────────────
+// ─── LIVE EQUATIONS (above active effects on canvas) ─────────
+function getEffectLiveEquation(eff, b) {
+  const spd = Math.hypot(b.vx, b.vy);
+  switch (eff.id) {
+    case "heat":
+      return "dT/dt = " + b.temp.toFixed(2) + " + Q  |  r\u2192" + b.targetRadius.toFixed(1);
+    case "cold":
+      return "dT/dt = " + b.temp.toFixed(2) + " \u2212 Q  |  r\u2192" + b.targetRadius.toFixed(1);
+    case "mass": {
+      const dist = Math.hypot(eff.x - b.x, eff.y - b.y);
+      return "F = \u2212GMm/r\u00b2  r=" + dist.toFixed(0) + "  t=" + (eff.timeRemaining || 0).toFixed(1) + "s";
+    }
+    case "highPressure":
+      return "\u2202p/\u2202t = c\u00b2\u2207\u00b7u  |v|=" + spd.toFixed(1);
+    case "vacuum":
+      return "u\u1d63 = \u2212k/r\u00b2  |v|=" + spd.toFixed(1);
+    case "tunneling": {
+      return "P ~ exp(\u22122\u03baL)  \u03c8=" + b.tunnelGhost.toFixed(2);
+    }
+    default:
+      return null;
+  }
+}
+
+// ─── LIVE EQUATIONS (left panel) ─────────────────────────────
 function getLiveEquation(tool, b) {
   const spd = Math.hypot(b.vx, b.vy);
   switch (tool.id) {
@@ -716,6 +741,34 @@ function draw() {
     ctx.save();
     for (const eff of state.activeEffects) eff.draw(ctx);
     ctx.restore();
+
+    // Live equations above active effects (hacker mode only)
+    if (state.hackerMode) {
+      ctx.save();
+      for (const eff of state.activeEffects) {
+        if (eff.dead) continue;
+        const liveEq = getEffectLiveEquation(eff, b);
+        if (!liveEq) continue;
+        const eqX = eff.x;
+        const eqY = eff.y - 50;
+        // Background pill
+        ctx.font = "bold 11px 'Courier New', monospace";
+        const tw = ctx.measureText(liveEq).width;
+        const px = 8, py = 4;
+        roundRect(ctx, eqX - tw * 0.5 - px, eqY - 8 - py, tw + px * 2, 16 + py * 2, 6);
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,230,160,0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Text
+        ctx.fillStyle = "rgba(0,255,200,0.85)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(liveEq, eqX, eqY);
+      }
+      ctx.restore();
+    }
   }
 
   // Board frame

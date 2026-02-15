@@ -10,10 +10,10 @@
 
 const LEVEL_PLACEMENTS = {
   1: {
-    // T-shaped wall demo — cat starts top-left, rod bottom-right
-    catSpawn:  { x: BOARD.x + BOARD.w * 0.12, y: BOARD.y + BOARD.h * 0.12 },
+    // T-shaped wall demo — cat starts left of the T, rod starts right of the T
+    catSpawn:  { x: BOARD.x + 11 * 40, y: BOARD.y + 10 * 40 },
     catVel:    { vx: 30, vy: 20 },
-    goalRod:   { x: BOARD.x + BOARD.w * 0.85, y: BOARD.y + BOARD.h * 0.88, h: 60 },
+    goalRod:   { x: BOARD.x + 20 * 40, y: BOARD.y + 10 * 40, h: 60 },
   },
   2: {
     // Cat spawns INSIDE the nested box (trapped) — use heat to expand and escape
