@@ -14,7 +14,7 @@ const LEVEL_PLACEMENTS = {
     catSpawn:  { x: BOARD.x + 11 * 40, y: BOARD.y + 10 * 40 },
     catVel:    { vx: 30, vy: 20 },
     goalRod:   { x: BOARD.x + 20 * 40, y: BOARD.y + 10 * 40, h: 60 },
-    toolCounts: { heat: 3, cold: 1, mass: 1, highPressure: 2, vacuum: 1, tunneling: 0 },
+    toolCounts: { heat: 1, cold: 1, mass: 1, highPressure: 1, vacuum: 1, tunneling: 1 },
   },
   2: {
     // Cat spawns INSIDE the nested box (trapped) — use heat to expand and escape
