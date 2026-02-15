@@ -4,6 +4,7 @@ import { InputHandler } from "./input.js";
 import { getLevelDefinitions } from "./levels.js";
 import { PhysicsEngine } from "./physics.js";
 import { Renderer } from "./renderer.js";
+import { TrailList } from "./trail.js";
 import { TOOL_DEFINITIONS, canUseTool, consumeToolUse, createPlacedEffect, createToolInventory } from "./tools.js";
 
 function insideRect(x, y, rect) {
@@ -33,6 +34,8 @@ export class Game {
     this.lastGoalHitMs = 0;
     this.levelClearedAtMs = 0;
     this.runComplete = false;
+    this.trail = new TrailList();
+    this.lastTrailPushMs = 0;
 
     this.cat = {
       x: BOARD_RECT.x + 180,
@@ -67,6 +70,8 @@ export class Game {
     this.cat.targetRadius = CAT.baseRadius;
     this.cat.inTunnel = false;
     this.levelClearedAtMs = 0;
+    this.trail.clear();
+    this.lastTrailPushMs = 0;
   }
 
   start() {
@@ -113,9 +118,28 @@ export class Game {
       }
     }
 
+    this.updateTrail(nowMs);
+
     if (this.levelClearedAtMs > 0 && nowMs - this.levelClearedAtMs > 850) {
       this.advanceLevel();
     }
+  }
+
+  updateTrail(nowMs) {
+    const trailColor = this.level?.trailColor;
+    if (!trailColor) {
+      this.trail.clear();
+      this.lastTrailPushMs = nowMs;
+      return;
+    }
+
+    const tail = this.trail.tail;
+    const distance = tail ? Math.hypot(this.cat.x - tail.x, this.cat.y - tail.y) : 999;
+    if (nowMs - this.lastTrailPushMs >= 30 && distance >= 4) {
+      this.trail.push(this.cat.x, this.cat.y, nowMs, trailColor);
+      this.lastTrailPushMs = nowMs;
+    }
+    this.trail.prune(nowMs);
   }
 
   advanceLevel() {
@@ -202,6 +226,7 @@ export class Game {
       goalPulse: nowMs - this.lastGoalHitMs < 320,
       levelCleared: this.levelClearedAtMs > 0,
       runComplete: this.runComplete,
+      trailNodes: this.trail.toArray(),
     });
   }
 }

@@ -195,6 +195,7 @@ export class Renderer {
     this.drawGoal(state.level?.goal, state.level?.rodColor ?? "#ff3b3b", state.goalPulse);
     this.drawWalls(state.level?.walls ?? [], state.mode, state.nowMs ?? performance.now());
     this.drawEffects(state.effects ?? [], state.nowMs ?? performance.now());
+    this.drawTrail(state.trailNodes ?? [], state.nowMs ?? performance.now());
     if (state.draggingTool && state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
       this.drawEffectPreview(state.draggingTool, state.pointer.x, state.pointer.y);
     }
@@ -546,6 +547,33 @@ export class Renderer {
     ctx.restore();
   }
 
+  drawTrail(nodes, nowMs) {
+    if (!nodes || nodes.length < 2) {
+      return;
+    }
+    const { ctx } = this;
+    ctx.save();
+    for (let i = 1; i < nodes.length; i += 1) {
+      const a = nodes[i - 1];
+      const b = nodes[i];
+      const age = nowMs - b.ts;
+      const alpha = Math.max(0, 1 - age / 1700) * 0.86;
+      if (alpha <= 0.02) {
+        continue;
+      }
+      ctx.strokeStyle = withAlpha(b.color, alpha);
+      ctx.lineWidth = 4.2;
+      ctx.lineCap = "round";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = withAlpha(b.color, alpha * 0.85);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   drawModeToggle(mode) {
     const { ctx } = this;
     const color = mode === MODES.HACKER ? "#6bff7f" : "#f1d0ff";
@@ -601,4 +629,13 @@ export class Renderer {
 
 function insideBoard(x, y) {
   return x >= BOARD_RECT.x && x <= BOARD_RECT.x + BOARD_RECT.w && y >= BOARD_RECT.y && y <= BOARD_RECT.y + BOARD_RECT.h;
+}
+
+function withAlpha(color, alpha) {
+  const cleaned = color.replace("#", "");
+  const value = cleaned.length === 3 ? cleaned.split("").map((ch) => ch + ch).join("") : cleaned;
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
 }
