@@ -17,9 +17,28 @@ const state = {
   tunnelPreview: null,
   toolUses: {},
   hackerMode: true,
-  hoverTool: -1
+  hoverTool: -1,
+  hoverToolPrev: -1,
+  hoverStart: 0,
+  tooltipAlpha: 0,
+  level: 1,
+  maxLevel: 7,
+  goalRod: null,         // { x, y, h } — set per level
+  winFlash: 0,           // flash timer on win
+  transitioning: false   // prevent input during transition
 };
 for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
+
+// Goal rod positions per level (x, y relative to BOARD)
+function initGoalRod() {
+  // Place rod in upper-right pocket area by default
+  state.goalRod = {
+    x: BOARD.x + BOARD.w * 0.85,
+    y: BOARD.y + BOARD.h * 0.15,
+    h: 60
+  };
+}
+initGoalRod();
 
 // ─── AUDIO ───────────────────────────────────────────────────
 // Per-file volume normalization (tweak these if a specific sound is too loud/quiet)
@@ -209,6 +228,12 @@ document.addEventListener("pointermove", e => {
       break;
     }
   }
+  // Tooltip hover timer
+  if (state.hoverTool !== state.hoverToolPrev) {
+    state.hoverToolPrev = state.hoverTool;
+    state.hoverStart = performance.now();
+    state.tooltipAlpha = 0;
+  }
   canvas.style.cursor = state.hoverTool >= 0 ? "pointer" : "";
 });
 canvas.addEventListener("pointerdown", e => {
@@ -255,6 +280,12 @@ document.addEventListener("pointerup", e => {
 // ─── UPDATE ──────────────────────────────────────────────────
 function update(dt) {
   dt = clamp(dt, 1 / 180, 1 / 25);
+
+  // Win flash decay
+  if (state.winFlash > 0) state.winFlash -= dt * 1.8;
+
+  // Block everything during transition
+  if (state.transitioning) return;
 
   // Decay disabled walls
   for (const [w, ttl] of state.disabledWalls) {
@@ -349,6 +380,54 @@ function update(dt) {
   }
 
   pointer.pressed = false; pointer.released = false;
+
+  // ── Win check: cat touches goal rod ──
+  checkWin();
+}
+
+function checkWin() {
+  const rod = state.goalRod;
+  if (!rod || state.transitioning) return;
+  // Check if cat center is close enough to the rod
+  const dx = balloon.x - rod.x;
+  const dy = balloon.y - clamp(balloon.y, rod.y, rod.y + rod.h);
+  const dist = Math.hypot(dx, dy);
+  if (dist < balloon.radius + 12) {
+    triggerWin();
+  }
+}
+
+function triggerWin() {
+  state.transitioning = true;
+  state.winFlash = 1;
+
+  setTimeout(() => {
+    if (state.level < state.maxLevel) {
+      state.level++;
+      // Reset balloon
+      balloon.x = BOARD.x + BOARD.w * 0.15;
+      balloon.y = BOARD.y + BOARD.h * 0.15;
+      balloon.vx = 40; balloon.vy = 30;
+      balloon.radius = BASE_RAD; balloon.targetRadius = BASE_RAD;
+      balloon.temp = 0; balloon.tunnelGhost = 0;
+      // Clear trail and effects
+      trail.length = 0;
+      particles.length = 0;
+      state.activeEffects.length = 0;
+      state.disabledWalls.clear();
+      state.tunnelPreview = null;
+      state.dragging = false;
+      state.activeTool = -1;
+      // Reset tool uses
+      for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
+      // Re-init goal rod for new level
+      initGoalRod();
+    } else {
+      // Beat all 7 levels! (placeholder: just flash)
+      state.winFlash = 2;
+    }
+    state.transitioning = false;
+  }, 600);
 }
 
 // ─── GAME LOOP ───────────────────────────────────────────────

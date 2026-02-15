@@ -13,6 +13,26 @@ const TRAIL_MAX = 190;
 const DEFAULT_WALL_WIDTH = 20;
 const HACKER_CB_RECT = { x: W - 180, y: 10, w: 168, h: 30 };
 
+// Rainbow rod colors per level
+const ROD_COLORS = [
+  "#ff3333",  // Level 1 - Red
+  "#ff8800",  // Level 2 - Orange
+  "#ffdd00",  // Level 3 - Yellow
+  "#33dd55",  // Level 4 - Green
+  "#3399ff",  // Level 5 - Blue
+  "#5533cc",  // Level 6 - Indigo
+  "#aa33ff"   // Level 7 - Violet
+];
+const TRAIL_COLORS = [
+  null,        // Level 1 - no trail
+  "#ff3333",  // Level 2 - Red
+  "#ff8800",  // Level 3 - Orange
+  "#ffdd00",  // Level 4 - Yellow
+  "#33dd55",  // Level 5 - Green
+  "#3399ff",  // Level 6 - Blue
+  "#7744ee"   // Level 7 - Violet/Indigo
+];
+
 // ─── MATH HELPERS ────────────────────────────────────────────
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 function dot(ax, ay, bx, by) { return ax * bx + ay * by; }

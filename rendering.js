@@ -3,6 +3,69 @@ const catHackerSprite = new Image();
 catHackerSprite.src = "Assets/VisualExamples/cat_hacker.png";
 const catNormalSprite = new Image();
 catNormalSprite.src = "Assets/VisualExamples/cat_normal.png";
+const normalBgImage = new Image();
+normalBgImage.src = "Assets/VisualExamples/background.png";
+
+// ─── GOAL ROD (NEON STICK) ───────────────────────────────────
+function drawGoalRod(ctx) {
+  const rod = state.goalRod;
+  if (!rod) return;
+  const color = ROD_COLORS[(state.level - 1) % ROD_COLORS.length];
+  const { x, y, h } = rod;
+  const rodW = 6;
+  const capR = 8;
+  const time = performance.now() * 0.002;
+
+  ctx.save();
+
+  // Outer glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 28 + Math.sin(time * 2) * 8;
+
+  // Rod body
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, color);
+  grad.addColorStop(0.5, "rgba(255,255,255,0.9)");
+  grad.addColorStop(1, color);
+  ctx.fillStyle = grad;
+  roundRect(ctx, x - rodW * 0.5, y, rodW, h, 3);
+  ctx.fill();
+
+  // Top cap (glowing orb)
+  const pulse = 1 + Math.sin(time * 3) * 0.15;
+  const orbR = capR * pulse;
+  const orbGrad = ctx.createRadialGradient(x, y, 0, x, y, orbR * 2);
+  orbGrad.addColorStop(0, "rgba(255,255,255,0.95)");
+  orbGrad.addColorStop(0.35, color);
+  orbGrad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = orbGrad;
+  ctx.beginPath();
+  ctx.arc(x, y, orbR * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner bright core
+  ctx.shadowBlur = 14;
+  ctx.beginPath();
+  ctx.arc(x, y, orbR * 0.6, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.fill();
+
+  // Bottom base glow
+  const baseGrad = ctx.createRadialGradient(x, y + h, 0, x, y + h, 14);
+  baseGrad.addColorStop(0, color + "66");
+  baseGrad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(x - 14, y + h - 4, 28, 8);
+
+  // Win flash overlay
+  if (state.winFlash > 0) {
+    ctx.globalAlpha = state.winFlash;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.restore();
+}
 
 // ─── DRAW HELPERS ────────────────────────────────────────────
 const WALL_THEMES = {
@@ -295,6 +358,109 @@ function drawSidebar(ctx) {
   ctx.restore();
 }
 
+// ─── CUTE TOOLTIPS (Normal Mode) ─────────────────────────────
+const CUTE_TIPS = {
+  heat: "Very hot! \u2728",
+  cold: "Brrr.. so chilly! \u2744\ufe0f",
+  mass: "Heavy lil gravity~ \u2b50",
+  highPressure: "Big push!! \ud83d\udca8",
+  vacuum: "Suck it in~ \ud83c\udf00",
+  tunneling: "Ghosty powers! \ud83d\udc7b"
+};
+
+function drawToolTooltip(ctx) {
+  if (state.hackerMode) return;
+  if (state.hoverTool < 0 || state.dragging) { state.tooltipAlpha = 0; return; }
+
+  const elapsed = performance.now() - state.hoverStart;
+  if (elapsed < 600) return; // delay before showing
+
+  // Fade in over 300ms after the delay
+  state.tooltipAlpha = Math.min(1, (elapsed - 600) / 300);
+  const alpha = state.tooltipAlpha;
+
+  const tool = TOOLS[state.hoverTool];
+  const tip = CUTE_TIPS[tool.id] || tool.name;
+  const rect = sidebarRect(state.hoverTool);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Position: to the right of sidebar cell
+  const bx = rect.x + rect.w + 14;
+  const by = rect.y + rect.h * 0.5;
+
+  // Measure text
+  ctx.font = "bold 20px 'Quicksand', sans-serif";
+  const tw = ctx.measureText(tip).width;
+  const padH = 20, padV = 14;
+  const bw = tw + padH * 2;
+  const bh = 44;
+
+  // Bubble shape
+  const br = 16;
+  const bubX = bx + 6;
+  const bubY = by - bh * 0.5;
+
+  // Shadow
+  ctx.shadowColor = "rgba(220,120,255,0.35)";
+  ctx.shadowBlur = 12;
+
+  // Bubble fill
+  const grad = ctx.createLinearGradient(bubX, bubY, bubX + bw, bubY + bh);
+  grad.addColorStop(0, "rgba(255,180,220,0.92)");
+  grad.addColorStop(1, "rgba(220,160,255,0.92)");
+  ctx.fillStyle = grad;
+
+  // Draw rounded rect bubble
+  ctx.beginPath();
+  ctx.moveTo(bubX + br, bubY);
+  ctx.lineTo(bubX + bw - br, bubY);
+  ctx.quadraticCurveTo(bubX + bw, bubY, bubX + bw, bubY + br);
+  ctx.lineTo(bubX + bw, bubY + bh - br);
+  ctx.quadraticCurveTo(bubX + bw, bubY + bh, bubX + bw - br, bubY + bh);
+  ctx.lineTo(bubX + br, bubY + bh);
+  ctx.quadraticCurveTo(bubX, bubY + bh, bubX, bubY + bh - br);
+  ctx.lineTo(bubX, bubY + br);
+  ctx.quadraticCurveTo(bubX, bubY, bubX + br, bubY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Little triangle pointer toward icon
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.moveTo(bubX, by - 5);
+  ctx.lineTo(bubX - 7, by);
+  ctx.lineTo(bubX, by + 5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bubble border
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(bubX + br, bubY);
+  ctx.lineTo(bubX + bw - br, bubY);
+  ctx.quadraticCurveTo(bubX + bw, bubY, bubX + bw, bubY + br);
+  ctx.lineTo(bubX + bw, bubY + bh - br);
+  ctx.quadraticCurveTo(bubX + bw, bubY + bh, bubX + bw - br, bubY + bh);
+  ctx.lineTo(bubX + br, bubY + bh);
+  ctx.quadraticCurveTo(bubX, bubY + bh, bubX, bubY + bh - br);
+  ctx.lineTo(bubX, bubY + br);
+  ctx.quadraticCurveTo(bubX, bubY, bubX + br, bubY);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Text
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#3a1048";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(tip, bubX + bw * 0.5, bubY + bh * 0.5 + 1);
+
+  ctx.restore();
+}
+
 // ─── LIVE EQUATIONS ──────────────────────────────────────────
 function getLiveEquation(tool, b) {
   const spd = Math.hypot(b.vx, b.vy);
@@ -336,15 +502,12 @@ function draw() {
   if (state.hackerMode) {
     ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, W, H);
   } else {
-    // Normal mode: purple/dark gradient on left, dark board area
-    const bgG = ctx.createLinearGradient(0, 0, BOARD.x, 0);
-    bgG.addColorStop(0, "#12061a");
-    bgG.addColorStop(0.5, "#0e0818");
-    bgG.addColorStop(1, "#0c060f");
-    ctx.fillStyle = bgG;
-    ctx.fillRect(0, 0, BOARD.x, H);
+    // Normal mode: background image
     ctx.fillStyle = "#050505";
-    ctx.fillRect(BOARD.x, 0, W - BOARD.x, H);
+    ctx.fillRect(0, 0, W, H);
+    if (normalBgImage.complete && normalBgImage.naturalWidth) {
+      ctx.drawImage(normalBgImage, 0, 0, W, H);
+    }
   }
 
   // Vignette
@@ -529,16 +692,27 @@ function draw() {
   // Trail
   if (trail.length > 1) {
     ctx.save();
+    const trailColor = TRAIL_COLORS[state.level - 1];
     for (let i = 1; i < trail.length; i++) {
       const prev = trail[i - 1], n = trail[i], a = clamp(n.life, 0, 1) * 0.86;
-      const r = Math.round(255 - cool * 28), g = Math.round(255 - warm * 24 + cool * 8);
-      const bl = Math.round(255 - warm * 54 + cool * 38);
+      let r, g, bl;
+      if (trailColor) {
+        // Parse hex trail color
+        const tc = parseInt(trailColor.slice(1), 16);
+        r = (tc >> 16) & 255; g = (tc >> 8) & 255; bl = tc & 255;
+      } else {
+        r = Math.round(255 - cool * 28); g = Math.round(255 - warm * 24 + cool * 8);
+        bl = Math.round(255 - warm * 54 + cool * 38);
+      }
       ctx.strokeStyle = `rgba(${r},${g},${bl},${a})`; ctx.lineWidth = 1.2 + a * 4.8;
       ctx.shadowColor = `rgba(${r},${g},${bl},0.58)`; ctx.shadowBlur = 16 * a;
       ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(n.x, n.y); ctx.stroke();
     }
     ctx.restore();
   }
+
+  // ── Goal Rod (Neon Stick) ──
+  drawGoalRod(ctx);
 
   // Balloon
   ctx.save();
@@ -599,6 +773,9 @@ function draw() {
   // Canvas sidebar
   drawSidebar(ctx);
 
+  // Cute tooltip bubble (normal mode only)
+  drawToolTooltip(ctx);
+
   // Update HTML panels
   updateHTMLPanels();
 }
@@ -608,14 +785,15 @@ function updateHTMLPanels() {
   const b = balloon;
   const tool = state.activeTool >= 0 ? TOOLS[state.activeTool] : null;
 
-  // Title
+  // Title — always static
   const titleEl = document.getElementById("topbar-title");
-  if (titleEl) titleEl.textContent = tool ? tool.title : "The Neon Cat";
+  if (titleEl) titleEl.textContent = "The Neon Cat";
 
-  // Equation (hacker mode only, while dragging a tool) — hidden from topbar, moved to left panel
-  const eqEl = document.getElementById("topbar-equation");
-  if (eqEl) {
-    eqEl.classList.remove("visible");
+  // Level indicator
+  const levelEl = document.getElementById("topbar-equation");
+  if (levelEl) {
+    levelEl.textContent = "Level " + state.level + " / " + state.maxLevel;
+    levelEl.classList.add("visible");
   }
 
   // Tool buttons highlight
