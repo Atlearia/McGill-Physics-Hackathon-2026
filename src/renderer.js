@@ -261,6 +261,8 @@ export class Renderer {
         this.drawHeatEffect(effect.x, effect.y, effect.radius, effect.remainingMs / 2000);
       } else if (effect.toolId === "cold") {
         this.drawColdEffect(effect.x, effect.y, effect.radius, effect.remainingMs / 2000);
+      } else if (effect.toolId === "mass") {
+        this.drawMassEffect(effect.x, effect.y, effect.radius, effect.remainingMs / Math.max(effect.lifetimeMs, 1));
       } else if (effect.toolId === "highPressure" || effect.toolId === "vacuum") {
         this.drawImpulseParticles(effect, nowMs);
       }
@@ -342,13 +344,98 @@ export class Renderer {
   }
 
   drawMassPreview(x, y, radius) {
+    this.drawMassEffect(x, y, radius, 1);
+  }
+
+  drawMassEffect(x, y, radius, strength = 1) {
     const { ctx } = this;
     ctx.save();
-    ctx.strokeStyle = "rgba(91,231,255,0.72)";
+    const glow = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+    glow.addColorStop(0, `rgba(91,231,255,${0.3 * strength})`);
+    glow.addColorStop(1, "rgba(91,231,255,0.02)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.strokeStyle = `rgba(91,231,255,${0.46 * strength})`;
+    ctx.lineWidth = 1.2;
+    const spacing = 26;
+    for (let gx = x - radius; gx <= x + radius; gx += spacing) {
+      ctx.beginPath();
+      let started = false;
+      for (let py = y - radius; py <= y + radius; py += 10) {
+        const dx = x - gx;
+        const dy = y - py;
+        const dist = Math.hypot(dx, dy);
+        if (dist > radius) {
+          started = false;
+          continue;
+        }
+        const warp = Math.max(0, 1 - dist / radius) * 14;
+        const nx = dist > 0 ? dx / dist : 0;
+        const ny = dist > 0 ? dy / dist : 0;
+        const wx = gx + nx * warp;
+        const wy = py + ny * warp;
+        if (!started) {
+          ctx.moveTo(wx, wy);
+          started = true;
+        } else {
+          ctx.lineTo(wx, wy);
+        }
+      }
+      ctx.stroke();
+    }
+
+    for (let gy = y - radius; gy <= y + radius; gy += spacing) {
+      ctx.beginPath();
+      let started = false;
+      for (let px = x - radius; px <= x + radius; px += 10) {
+        const dx = x - px;
+        const dy = y - gy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > radius) {
+          started = false;
+          continue;
+        }
+        const warp = Math.max(0, 1 - dist / radius) * 14;
+        const nx = dist > 0 ? dx / dist : 0;
+        const ny = dist > 0 ? dy / dist : 0;
+        const wx = px + nx * warp;
+        const wy = gy + ny * warp;
+        if (!started) {
+          ctx.moveTo(wx, wy);
+          started = true;
+        } else {
+          ctx.lineTo(wx, wy);
+        }
+      }
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = `rgba(91,231,255,${0.85 * strength})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+
+    for (let gy = -radius + 30; gy < radius; gy += 44) {
+      for (let gx = -radius + 30; gx < radius; gx += 44) {
+        const dist = Math.hypot(gx, gy);
+        if (dist > radius - 8 || dist < 8) {
+          continue;
+        }
+        const pull = (1 - dist / radius) * 7 * strength;
+        drawVectorArrow(ctx, x + gx, y + gy, (-gx / dist) * pull, (-gy / dist) * pull, "#70f0ff", 0.52);
+      }
+    }
+
     ctx.restore();
   }
 

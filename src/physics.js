@@ -106,6 +106,21 @@ export class PhysicsEngine {
         return effect.overlapBudgetMs > 0;
       }
 
+       if (effect.toolId === "mass") {
+        effect.remainingMs = effect.lifetimeMs - (nowMs - effect.createdAt);
+        if (effect.remainingMs <= 0) {
+          return false;
+        }
+        const dx = effect.x - state.cat.x;
+        const dy = effect.y - state.cat.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const falloff = Math.max(0, 1 - dist / effect.radius);
+        const pull = (58 + falloff * 82) * dt;
+        state.cat.vx += (dx / dist) * pull;
+        state.cat.vy += (dy / dist) * pull;
+        return true;
+      }
+
       if (effect.lifetimeMs > 0) {
         effect.remainingMs = effect.lifetimeMs - (nowMs - effect.createdAt);
         return effect.remainingMs > 0;

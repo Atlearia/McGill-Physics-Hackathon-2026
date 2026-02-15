@@ -131,7 +131,8 @@ export class Game {
     }
 
     if (pointer.justReleased && this.draggingTool) {
-      if (insideRect(pointer.x, pointer.y, BOARD_RECT) && canUseTool(this.toolInventory, this.draggingTool)) {
+      const canDrop = insideRect(pointer.x, pointer.y, BOARD_RECT) || this.draggingTool === "mass";
+      if (canDrop && canUseTool(this.toolInventory, this.draggingTool)) {
         this.effects.push(createPlacedEffect(this.draggingTool, pointer.x, pointer.y, nowMs));
         consumeToolUse(this.toolInventory, this.draggingTool);
       }
