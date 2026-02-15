@@ -23,55 +23,108 @@ for (const [id, src] of Object.entries(TOOL_ICON_MAP)) {
 }
 
 // ─── GOAL ROD (NEON STICK) ───────────────────────────────────
+// Rod sprite images per level (rainbow order)
+const ROD_SPRITE_PATHS = [
+  "Assets/VisualExamples/1red.png",     // Level 1
+  "Assets/VisualExamples/1orange.png",  // Level 2
+  "Assets/VisualExamples/1yellow.png",  // Level 3
+  "Assets/VisualExamples/1green.png",   // Level 4
+  "Assets/VisualExamples/1blue.png",    // Level 5
+  "Assets/VisualExamples/1indigo.png",  // Level 6
+  "Assets/VisualExamples/1purple.png",  // Level 7
+];
+const rodSprites = ROD_SPRITE_PATHS.map(src => {
+  const img = new Image();
+  img.src = src;
+  return img;
+});
+
 function drawGoalRod(ctx) {
   const rod = state.goalRod;
   if (!rod) return;
-  const color = ROD_COLORS[(state.level - 1) % ROD_COLORS.length];
+  const lvlIdx = (state.level - 1) % ROD_COLORS.length;
+  const color = ROD_COLORS[lvlIdx];
   const { x, y, h } = rod;
-  const rodW = 6;
-  const capR = 8;
   const time = performance.now() * 0.002;
+  const sprite = rodSprites[lvlIdx];
 
   ctx.save();
 
-  // Outer glow
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 28 + Math.sin(time * 2) * 8;
+  // Pulsing neon aura — large soft outer glow
+  const pulseA = 0.35 + Math.sin(time * 2) * 0.15;
+  const glowSize = 44 + Math.sin(time * 1.5) * 10;
+  const auraGrad = ctx.createRadialGradient(x, y + h * 0.5, 0, x, y + h * 0.5, glowSize);
+  auraGrad.addColorStop(0, color + "55");
+  auraGrad.addColorStop(0.5, color + "22");
+  auraGrad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.globalAlpha = pulseA;
+  ctx.fillStyle = auraGrad;
+  ctx.fillRect(x - glowSize, y + h * 0.5 - glowSize, glowSize * 2, glowSize * 2);
+  ctx.globalAlpha = 1;
 
-  // Rod body
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
-  grad.addColorStop(0, color);
-  grad.addColorStop(0.5, "rgba(255,255,255,0.9)");
-  grad.addColorStop(1, color);
-  ctx.fillStyle = grad;
-  roundRect(ctx, x - rodW * 0.5, y, rodW, h, 3);
-  ctx.fill();
+  // Draw the rod sprite with neon shadow glow
+  if (sprite.complete && sprite.naturalWidth > 0) {
+    // Scale sprite to be visually prominent (like the placeholder orbs)
+    const aspect = sprite.naturalWidth / sprite.naturalHeight;
+    const drawH = h * 3;
+    const drawW = drawH * aspect;
+    const drawY = y + h * 0.5 - drawH * 0.5;  // center vertically on rod position
 
-  // Top cap (glowing orb)
-  const pulse = 1 + Math.sin(time * 3) * 0.15;
-  const orbR = capR * pulse;
-  const orbGrad = ctx.createRadialGradient(x, y, 0, x, y, orbR * 2);
-  orbGrad.addColorStop(0, "rgba(255,255,255,0.95)");
-  orbGrad.addColorStop(0.35, color);
-  orbGrad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = orbGrad;
-  ctx.beginPath();
-  ctx.arc(x, y, orbR * 2, 0, Math.PI * 2);
-  ctx.fill();
+    // Tilt 30 degrees to the right
+    const angle = 30 * Math.PI / 180;
+    ctx.translate(x, y + h * 0.5);
+    ctx.rotate(angle);
 
-  // Inner bright core
-  ctx.shadowBlur = 14;
-  ctx.beginPath();
-  ctx.arc(x, y, orbR * 0.6, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fill();
+    // Neon glow behind sprite (shadow)
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 24 + Math.sin(time * 2.5) * 8;
 
-  // Bottom base glow
-  const baseGrad = ctx.createRadialGradient(x, y + h, 0, x, y + h, 14);
-  baseGrad.addColorStop(0, color + "66");
+    // Draw sprite centered on rod position
+    ctx.drawImage(sprite, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+
+    // Second pass for stronger glow
+    ctx.globalAlpha = 0.4 + Math.sin(time * 3) * 0.1;
+    ctx.shadowBlur = 40 + Math.sin(time * 1.8) * 12;
+    ctx.drawImage(sprite, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // Reset transform
+    ctx.rotate(-angle);
+    ctx.translate(-x, -(y + h * 0.5));
+  } else {
+    // Fallback: draw procedural rod if sprite not loaded
+    const rodW = 6;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 28 + Math.sin(time * 2) * 8;
+    const grad = ctx.createLinearGradient(x, y, x, y + h);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.5, "rgba(255,255,255,0.9)");
+    grad.addColorStop(1, color);
+    ctx.fillStyle = grad;
+    roundRect(ctx, x - rodW * 0.5, y, rodW, h, 3);
+    ctx.fill();
+
+    // Top orb
+    const pulse = 1 + Math.sin(time * 3) * 0.15;
+    const orbR = 8 * pulse;
+    const orbGrad = ctx.createRadialGradient(x, y, 0, x, y, orbR * 2);
+    orbGrad.addColorStop(0, "rgba(255,255,255,0.95)");
+    orbGrad.addColorStop(0.35, color);
+    orbGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = orbGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, orbR * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Bottom base glow (ground reflection)
+  ctx.shadowBlur = 0;
+  const baseGrad = ctx.createRadialGradient(x, y + h, 0, x, y + h, 18);
+  baseGrad.addColorStop(0, color + "55");
   baseGrad.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = baseGrad;
-  ctx.fillRect(x - 14, y + h - 4, 28, 8);
+  ctx.fillRect(x - 18, y + h - 5, 36, 10);
 
   // Win flash overlay
   if (state.winFlash > 0) {

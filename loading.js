@@ -36,9 +36,36 @@ const ELEMENTS = [
   if (bottombar) bottombar.style.opacity = "0";
 
   let step = 0;
-  const STEP_DELAY = 420;     // ms per element step
-  const FINAL_HOLD = 900;    // ms to hold on Neon before transition
+  let visualProgress = 0;
+  const DELAY_SCALE = 0.5;
+  const STEP_DELAY = 420 * DELAY_SCALE;     // base ms per element step
+  const FINAL_HOLD = 900 * DELAY_SCALE;    // ms to hold on Neon before transition
   const FADE_DURATION = 800;  // ms for fade-out
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function nextProgressPercent(i) {
+    const total = ELEMENTS.length;
+    const base = ((i + 1) / total) * 100;
+    if (i === total - 1) return 100;
+
+    const phase = i / Math.max(1, total - 1); // 0..1 across loading
+    const jitter = (Math.random() * 2 - 1) * (3.6 - phase * 1.6);
+    const minBound = visualProgress + 2.5;
+    const maxBound = Math.min(98, ((i + 1.35) / total) * 100);
+    return clamp(base + jitter, minBound, maxBound);
+  }
+
+  function nextStepDelay(i) {
+    const total = ELEMENTS.length;
+    const phase = i / Math.max(1, total - 1); // 0..1 across loading
+    const centerBoost = 1 - Math.pow(2 * phase - 1, 2); // faster near middle
+    const curve = 0.82 + centerBoost * 0.55;
+    const jitter = 0.82 + Math.random() * 0.42;
+    return Math.round(STEP_DELAY * curve * jitter);
+  }
 
   function showStep(i) {
     const el = ELEMENTS[i];
@@ -47,7 +74,14 @@ const ELEMENTS = [
     nameEl.textContent = el.name;
     massEl.textContent = el.mass + " u";
     curEl.textContent = el.z;
-    barFill.style.width = (el.z * 10) + "%";
+    const progress = nextProgressPercent(i);
+    visualProgress = progress;
+    const transitionMs = Math.round((250 + Math.random() * 240) * DELAY_SCALE);
+    const easing = i === ELEMENTS.length - 1
+      ? "cubic-bezier(0.22, 1, 0.36, 1)"
+      : "cubic-bezier(0.2, 0.95, 0.3, 1)";
+    barFill.style.transition = "width " + transitionMs + "ms " + easing;
+    barFill.style.width = progress + "%";
 
     // Pulse effect
     card.classList.remove("pulse", "neon-flash");
@@ -76,9 +110,10 @@ const ELEMENTS = [
   function advance() {
     if (dismissed) return;
     if (step < ELEMENTS.length) {
-      showStep(step);
+      const currentStep = step;
+      showStep(currentStep);
       step++;
-      const delay = step === ELEMENTS.length ? FINAL_HOLD : STEP_DELAY;
+      const delay = step === ELEMENTS.length ? FINAL_HOLD : nextStepDelay(currentStep);
       setTimeout(advance, delay);
     } else {
       dismiss();
@@ -105,5 +140,5 @@ const ELEMENTS = [
   screen.addEventListener("click", () => {});
 
   // Start after a brief initial pause
-  setTimeout(advance, 350);
+  setTimeout(advance, Math.round((250 + Math.random() * 220) * DELAY_SCALE));
 })();

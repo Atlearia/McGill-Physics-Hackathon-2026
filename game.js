@@ -29,14 +29,10 @@ const state = {
 };
 for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
 
-// Goal rod positions per level (x, y relative to BOARD)
+// Goal rod and spawn from level registry
 function initGoalRod() {
-  // Place rod in upper-right pocket area by default
-  state.goalRod = {
-    x: BOARD.x + BOARD.w * 0.85,
-    y: BOARD.y + BOARD.h * 0.15,
-    h: 60
-  };
+  const p = getLevelPlacement(state.level);
+  state.goalRod = { ...p.goalRod };
 }
 initGoalRod();
 
@@ -368,6 +364,16 @@ function update(dt) {
     if (!hit) break;
   }
 
+  // Hard clamp to board boundaries (prevent escaping maze)
+  const bMinX = BOARD.x + balloon.radius;
+  const bMaxX = BOARD.x + BOARD.w - balloon.radius;
+  const bMinY = BOARD.y + balloon.radius;
+  const bMaxY = BOARD.y + BOARD.h - balloon.radius;
+  if (balloon.x < bMinX) { balloon.x = bMinX; if (balloon.vx < 0) balloon.vx *= -BASE_ELAST; }
+  if (balloon.x > bMaxX) { balloon.x = bMaxX; if (balloon.vx > 0) balloon.vx *= -BASE_ELAST; }
+  if (balloon.y < bMinY) { balloon.y = bMinY; if (balloon.vy < 0) balloon.vy *= -BASE_ELAST; }
+  if (balloon.y > bMaxY) { balloon.y = bMaxY; if (balloon.vy > 0) balloon.vy *= -BASE_ELAST; }
+
   // Trail
   const head = trail[trail.length - 1];
   if (!head || Math.hypot(head.x - balloon.x, head.y - balloon.y) > 2.2)
@@ -414,32 +420,85 @@ function triggerWin() {
 
   setTimeout(() => {
     if (state.level < state.maxLevel) {
-      state.level++;
-      // Reset balloon
-      balloon.x = BOARD.x + BOARD.w * 0.15;
-      balloon.y = BOARD.y + BOARD.h * 0.15;
-      balloon.vx = 40; balloon.vy = 30;
-      balloon.radius = BASE_RAD; balloon.targetRadius = BASE_RAD;
-      balloon.temp = 0; balloon.tunnelGhost = 0;
-      // Clear trail and effects
-      trail.length = 0;
-      particles.length = 0;
-      state.activeEffects.length = 0;
-      state.disabledWalls.clear();
-      state.tunnelPreview = null;
-      state.dragging = false;
-      state.activeTool = -1;
-      // Reset tool uses
-      for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
-      // Re-init goal rod for new level
-      initGoalRod();
+      goToLevel(state.level + 1);
     } else {
       // Beat all 7 levels! (placeholder: just flash)
       state.winFlash = 2;
+      state.transitioning = false;
     }
-    state.transitioning = false;
   }, 600);
 }
+
+function goToLevel(n) {
+  n = clamp(Math.floor(n), 1, state.maxLevel);
+  state.level = n;
+  // Load correct wall data
+  const lvlId = "lvl" + n;
+  if (availableLevels().includes(lvlId)) {
+    setLevel(lvlId);
+  }
+  // Use per-level placement data
+  const p = getLevelPlacement(n);
+  balloon.x = p.catSpawn.x;
+  balloon.y = p.catSpawn.y;
+  balloon.vx = p.catVel.vx;
+  balloon.vy = p.catVel.vy;
+  balloon.radius = BASE_RAD; balloon.targetRadius = BASE_RAD;
+  balloon.temp = 0; balloon.tunnelGhost = 0;
+
+  // --- Ensure cat does not spawn inside a wall ---
+  let maxTries = 60, angle = 0, found = false;
+  while (maxTries-- > 0) {
+    let overlap = false;
+    for (const w of walls) {
+      if (state.disabledWalls && state.disabledWalls.has(w)) continue;
+      // Closest point on wall segment
+      const cp = typeof closestPt === 'function' ? closestPt(balloon.x, balloon.y, w.a.x, w.a.y, w.b.x, w.b.y) : {x:balloon.x, y:balloon.y};
+      const dist = Math.hypot(balloon.x - cp.x, balloon.y - cp.y);
+      const minDist = balloon.radius + (typeof wallHalfWidth === 'function' ? wallHalfWidth(w) : 10);
+      if (dist < minDist) { overlap = true; break; }
+    }
+    if (!overlap) { found = true; break; }
+    // Nudge outward in a spiral
+    angle += Math.PI / 5;
+    const r = 8 + 4 * (60 - maxTries);
+    balloon.x = p.catSpawn.x + Math.cos(angle) * r;
+    balloon.y = p.catSpawn.y + Math.sin(angle) * r;
+  }
+  if (!found) {
+    // Fallback: place at board center
+    balloon.x = BOARD.x + BOARD.w * 0.5;
+    balloon.y = BOARD.y + BOARD.h * 0.5;
+  }
+
+  // Clear trail and effects
+  trail.length = 0;
+  particles.length = 0;
+  state.activeEffects.length = 0;
+  state.disabledWalls.clear();
+  state.tunnelPreview = null;
+  state.dragging = false;
+  state.activeTool = -1;
+  // Reset tool uses
+  for (const t of TOOLS) state.toolUses[t.id] = t.maxUses != null ? t.maxUses : Infinity;
+  // Re-init goal rod for new level
+  initGoalRod();
+  state.transitioning = false;
+  // Update input
+  const inp = document.getElementById("level-input");
+  if (inp) inp.value = n;
+}
+
+// Level jump UI
+(function initLevelJump() {
+  const btn = document.getElementById("level-go-btn");
+  const inp = document.getElementById("level-input");
+  if (!btn || !inp) return;
+  btn.addEventListener("click", () => goToLevel(parseInt(inp.value) || 1));
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter") goToLevel(parseInt(inp.value) || 1);
+  });
+})();
 
 // ─── GAME LOOP ───────────────────────────────────────────────
 let lastTime = 0;
