@@ -4,7 +4,7 @@ import { InputHandler } from "./input.js";
 import { getLevelDefinitions } from "./levels.js";
 import { PhysicsEngine } from "./physics.js";
 import { Renderer } from "./renderer.js";
-import { canUseTool, consumeToolUse, createPlacedEffect, createToolInventory } from "./tools.js";
+import { TOOL_DEFINITIONS, canUseTool, consumeToolUse, createPlacedEffect, createToolInventory } from "./tools.js";
 
 function insideRect(x, y, rect) {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
@@ -39,6 +39,7 @@ export class Game {
       vy: 0,
       radius: CAT.baseRadius,
       targetRadius: CAT.baseRadius,
+      inTunnel: false,
     };
   }
 
@@ -62,6 +63,7 @@ export class Game {
     this.cat.vy = 0;
     this.cat.radius = CAT.baseRadius;
     this.cat.targetRadius = CAT.baseRadius;
+    this.cat.inTunnel = false;
   }
 
   start() {
@@ -94,6 +96,7 @@ export class Game {
         cat: this.cat,
         level: this.level,
         effects: this.effects,
+        nowMs,
       },
       this.input.getAxis(),
       dt,
@@ -133,11 +136,34 @@ export class Game {
     if (pointer.justReleased && this.draggingTool) {
       const canDrop = insideRect(pointer.x, pointer.y, BOARD_RECT) || this.draggingTool === "mass";
       if (canDrop && canUseTool(this.toolInventory, this.draggingTool)) {
-        this.effects.push(createPlacedEffect(this.draggingTool, pointer.x, pointer.y, nowMs));
-        consumeToolUse(this.toolInventory, this.draggingTool);
+        if (this.draggingTool === "tunneling") {
+          const targetWall = this.findWallAt(pointer.x, pointer.y);
+          if (targetWall) {
+            const effect = createPlacedEffect(this.draggingTool, pointer.x, pointer.y, nowMs);
+            const ttl = TOOL_DEFINITIONS.tunneling.tunnelTtlMs;
+            targetWall.tunnelUntilMs = nowMs + ttl;
+            effect.lifetimeMs = ttl;
+            effect.remainingMs = ttl;
+            effect.tunnelWallId = targetWall.id;
+            this.effects.push(effect);
+            consumeToolUse(this.toolInventory, this.draggingTool);
+          }
+        } else {
+          this.effects.push(createPlacedEffect(this.draggingTool, pointer.x, pointer.y, nowMs));
+          consumeToolUse(this.toolInventory, this.draggingTool);
+        }
       }
       this.draggingTool = null;
     }
+  }
+
+  findWallAt(x, y) {
+    for (const wall of this.level.walls) {
+      if (insideRect(x, y, wall)) {
+        return wall;
+      }
+    }
+    return null;
   }
 
   render(nowMs) {

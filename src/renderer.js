@@ -192,7 +192,7 @@ export class Renderer {
     }
 
     this.drawGoal(state.level?.goal, state.level?.rodColor ?? "#ff3b3b", state.goalPulse);
-    this.drawWalls(state.level?.walls ?? [], state.mode);
+    this.drawWalls(state.level?.walls ?? [], state.mode, state.nowMs ?? performance.now());
     this.drawEffects(state.effects ?? [], state.nowMs ?? performance.now());
     if (state.draggingTool && state.pointer && insideBoard(state.pointer.x, state.pointer.y)) {
       this.drawEffectPreview(state.draggingTool, state.pointer.x, state.pointer.y);
@@ -220,19 +220,45 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawWalls(walls, mode) {
+  drawWalls(walls, mode, nowMs) {
     const { ctx } = this;
     for (const segment of walls) {
       ctx.save();
-      if (this.patterns.wall && mode === MODES.NORMAL) {
-        ctx.fillStyle = this.patterns.wall;
+      const tunnelActive = segment.tunnelUntilMs > nowMs;
+      if (tunnelActive) {
+        ctx.fillStyle = "rgba(8,8,8,0.35)";
+        ctx.fillRect(segment.x, segment.y, segment.w, segment.h);
+        ctx.strokeStyle = "rgba(245,245,245,0.84)";
+        ctx.lineWidth = 1.6;
+        ctx.strokeRect(segment.x, segment.y, segment.w, segment.h);
+
+        for (let i = 0; i < 32; i += 1) {
+          const px = segment.x + (((Math.sin(nowMs * 0.021 + i * 17.3) + 1) / 2) * segment.w);
+          const py = segment.y + (((Math.cos(nowMs * 0.019 + i * 13.7) + 1) / 2) * segment.h);
+          const alpha = 0.23 + (((i * 29) % 7) / 10) * 0.2;
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.fillRect(px, py, 2, 2);
+        }
+
+        ctx.strokeStyle = "rgba(250,250,250,0.3)";
+        for (let i = 0; i < 6; i += 1) {
+          const y = segment.y + ((i + 1) * segment.h) / 7;
+          ctx.beginPath();
+          ctx.moveTo(segment.x, y);
+          ctx.lineTo(segment.x + segment.w, y + ((i % 2) * 2 - 1) * 4);
+          ctx.stroke();
+        }
       } else {
-        ctx.fillStyle = mode === MODES.HACKER ? "rgba(60,60,60,0.95)" : "rgba(225,190,255,0.95)";
+        if (this.patterns.wall && mode === MODES.NORMAL) {
+          ctx.fillStyle = this.patterns.wall;
+        } else {
+          ctx.fillStyle = mode === MODES.HACKER ? "rgba(60,60,60,0.95)" : "rgba(225,190,255,0.95)";
+        }
+        ctx.fillRect(segment.x, segment.y, segment.w, segment.h);
+        ctx.strokeStyle = "rgba(255,255,255,0.98)";
+        ctx.lineWidth = 2.2;
+        ctx.strokeRect(segment.x, segment.y, segment.w, segment.h);
       }
-      ctx.fillRect(segment.x, segment.y, segment.w, segment.h);
-      ctx.strokeStyle = "rgba(255,255,255,0.98)";
-      ctx.lineWidth = 2.2;
-      ctx.strokeRect(segment.x, segment.y, segment.w, segment.h);
       ctx.restore();
     }
   }
@@ -246,6 +272,20 @@ export class Renderer {
     const size = cat.radius * 3.2;
     const x = cat.x - size / 2;
     const y = cat.y - size / 2;
+
+    if (cat.inTunnel) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.globalCompositeOperation = "screen";
+      ctx.filter = "saturate(1.4)";
+      ctx.drawImage(sprite, x - 11, y, size, size);
+      ctx.fillStyle = "rgba(255,40,40,0.35)";
+      ctx.fillRect(x - 11, y, size, size);
+      ctx.drawImage(sprite, x + 11, y, size, size);
+      ctx.fillStyle = "rgba(60,70,255,0.35)";
+      ctx.fillRect(x + 11, y, size, size);
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.globalAlpha = 0.96;

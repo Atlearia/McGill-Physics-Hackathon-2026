@@ -43,6 +43,7 @@ export const TOOL_DEFINITIONS = {
   tunneling: {
     ...TOOL_META.tunneling,
     kind: "segment",
+    lifetimeMs: 1900,
     tunnelTtlMs: 1900,
     sfx: "quantum",
   },

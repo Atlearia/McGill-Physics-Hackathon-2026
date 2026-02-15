@@ -79,7 +79,7 @@ export class PhysicsEngine {
 
     cat.x += cat.vx * dt;
     cat.y += cat.vy * dt;
-    this.resolveWorldCollision(state);
+    this.resolveWorldCollision(state, dt, nowMs);
 
     return this.isGoalReached(state);
   }
@@ -170,12 +170,23 @@ export class PhysicsEngine {
     cat.radius += (cat.targetRadius - cat.radius) * Math.min(1, dt * 9);
   }
 
-  resolveWorldCollision(state) {
+  resolveWorldCollision(state, dt, nowMs) {
     const cat = state.cat;
+    cat.inTunnel = false;
     cat.x = clamp(cat.x, BOARD_RECT.x + cat.radius, BOARD_RECT.x + BOARD_RECT.w - cat.radius);
     cat.y = clamp(cat.y, BOARD_RECT.y + cat.radius, BOARD_RECT.y + BOARD_RECT.h - cat.radius);
 
     for (const wall of state.level.walls) {
+      const isTunnelActive = wall.tunnelUntilMs > nowMs;
+      if (isTunnelActive) {
+        if (circleIntersectsRect(cat, wall)) {
+          cat.inTunnel = true;
+          const drag = Math.pow(0.36, dt * 2.6);
+          cat.vx *= drag;
+          cat.vy *= drag;
+        }
+        continue;
+      }
       resolveCircleRectCollision(cat, wall);
     }
   }
